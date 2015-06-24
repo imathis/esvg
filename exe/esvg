@@ -1,0 +1,24 @@
+#! /usr/bin/env ruby
+
+$LOAD_PATH.unshift(File.expand_path("../lib", File.dirname(__FILE__)))
+
+require 'optparse'
+require 'esvg'
+
+options = {}
+
+OptionParser.new do |opts|
+  opts.on("-c", "--css", "Embed SVGs in CSS file") do
+    options[:output] = 'icons.scss'
+    options[:css] = true
+  end
+
+  opts.on("-h", "--html", "Embed SVGs in HTML file") do
+    options[:output] = 'icons.html'
+    options[:html] = true
+  end
+end
+
+options[:dir] = ARGV.shift
+
+Esvg.optimize(options)
