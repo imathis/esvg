@@ -24,6 +24,6 @@ OptionParser.new do |opts|
 end.parse!
 
 options[:dir] = ARGV.shift
-options[:output] = ARGV.shift
+options[:filename] = ARGV.shift
 
 Esvg.optimize(options)
