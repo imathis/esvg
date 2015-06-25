@@ -17,6 +17,10 @@ OptionParser.new do |opts|
     options[:output] = 'icons.html'
     options[:html] = true
   end
+
+  opts.on("-n", "--namespace", String, "Choose a namespace for svg elements") do |namespace|
+    options[:namespace] = namespace
+  end
 end.parse!
 
 options[:dir] = ARGV.shift

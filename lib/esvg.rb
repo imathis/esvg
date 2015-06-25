@@ -9,6 +9,9 @@ module Esvg
   def optimize(options)
     @config = {
       dir: Dir.pwd,
+      namespace: 'icon',
+      namespace_after: true,
+      font_size: '1em',
     }.merge(options)
 
     config[:output] = if config[:filename]
@@ -41,7 +44,21 @@ module Esvg
 
   def css
     styles = []
-    preamble = %Q{%esvg-icon { background-repeat: none; }}
+    preamble = %Q{%svg-icon { 
+  clip: auto;
+  font-size: #{config[:font_size]};
+  background: {
+    size: auto 1em;
+    repeat: no-repeat;
+    position: center center;
+  }
+  display: inline-block;
+  overflow: hidden;
+  height: 1em;
+  width: 1em;
+  color: transparent;
+  vertical-align: middle;
+}}
     styles << preamble
 
     files.each do |name, contents|
@@ -49,9 +66,18 @@ module Esvg
                   .gsub(/>/, '%3E') # escape >
                   .gsub(/#/, '%23') # escape #
                   .gsub(/\n/,'')    # remove newlines
-      styles << ".#{dasherize(name)}-icon { background-image: url('data:image/svg+xml;utf-8,#{f}'); @extend %esvg-icon; }"
+      styles << "#{classname(name)} { background-image: url('data:image/svg+xml;utf-8,#{f}'); @extend %svg-icon; }"
     end
     styles.join("\n")
+  end
+
+  def classname(file)
+    name = dasherize(file)
+    if config[:namespace_after]
+      ".#{name}-#{config[:namespace]}"
+    else
+      ".#{config[:namespace]}-#{name}"
+    end
   end
 
   def html
