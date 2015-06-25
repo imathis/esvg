@@ -17,7 +17,7 @@ OptionParser.new do |opts|
     options[:output] = 'icons.html'
     options[:html] = true
   end
-end
+end.parse!
 
 options[:dir] = ARGV.shift
 
