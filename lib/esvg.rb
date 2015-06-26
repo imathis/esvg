@@ -36,7 +36,7 @@ module Esvg
     if config[:css]
       css
     elsif config[:html]
-      abort 'not implemented yet'
+      html
     else
       abort 'no options'
     end
@@ -66,22 +66,38 @@ module Esvg
                   .gsub(/>/, '%3E') # escape >
                   .gsub(/#/, '%23') # escape #
                   .gsub(/\n/,'')    # remove newlines
-      styles << "#{classname(name)} { background-image: url('data:image/svg+xml;utf-8,#{f}'); @extend %svg-icon; }"
+      styles << ".#{property_name(name)} { background-image: url('data:image/svg+xml;utf-8,#{f}'); @extend %svg-icon; }"
     end
     styles.join("\n")
   end
 
-  def classname(file)
+  def property_name(file)
     name = dasherize(file)
     if config[:namespace_after]
-      ".#{name}-#{config[:namespace]}"
+      "#{name}-#{config[:namespace]}"
     else
-      ".#{config[:namespace]}-#{name}"
+      "#{config[:namespace]}-#{name}"
     end
   end
 
   def html
-    # TODO: make this
+    svg = []
+    svg << %Q{<svg xmlns="http://www.w3.org/2000/svg" width="312"><defs>}
+    files.each do |name, contents|
+      svg << contents.gsub(/<svg.+?>/, %Q{<g id="#{property_name(name)}" #{dimensions(contents)}>})
+                     .gsub(/<\/svg/, '</g')
+                     .gsub(/\n/, '')
+    end
+    svg << %Q{</defs></svg>}
+    svg.join("\n")
+  end
+
+  def dimensions(input)
+    dimensions = [] 
+    %w(viewBox height width).map do |dimension|
+        dimensions << input.scan(/<svg.+(#{dimension}=["'].+?["'])/).flatten.first
+    end
+    dimensions.compact.join(' ')
   end
 
   def dasherize(input)
