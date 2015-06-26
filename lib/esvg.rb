@@ -1,5 +1,6 @@
 require "esvg/version"
 require "svg_optimizer"
+require "fileutils"
 
 module Esvg
   extend self
@@ -17,8 +18,8 @@ module Esvg
 
   CONFIG_RAILS = {
     path: "app/assets/images/svg_icons",
-    css_path: "app/assets/stylesheets/_svg-icons.scss",
-    html_path: "app/views/shared/_svg-icons.html"
+    css_path: "app/assets/stylesheets/_svg_icons.scss",
+    html_path: "app/views/shared/_svg_icons.html"
   }
 
   def optimize(options)
