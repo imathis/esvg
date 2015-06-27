@@ -19,12 +19,14 @@ OptionParser.new do |opts|
   opts.on("-o", "--output PATH", String, "Where should SCSS/HTML files be written, (default: current directory)") do |path|
     options[:output_path] = path
   end
-
-  opts.on("-r", "--rails", "Use Rails defaults for input/output, read: app/assets/images/svg, write: app/assets/stylesheets/, app/views/shared/") do
-    options[:rails] = true
-  end
 end.parse!
 
 options[:path] = ARGV.shift
 
-Esvg.optimize(options)
+esvg = Esvg::SVG.new(options)
+
+if options[:stylesheet_embed]
+  esvg.write_stylesheet
+else
+  esvg.write_html
+end
