@@ -156,7 +156,7 @@ module Esvg
     end
 
     def dasherize(input)
-      input.gsub(/\W/, '-').gsub(/-+/, '-')
+      input.gsub(/\W/, '-').gsub(/-{2,}/, '-')
     end
 
     def find_files
