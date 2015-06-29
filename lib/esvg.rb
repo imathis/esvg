@@ -12,6 +12,16 @@ module Esvg
 
   def icons(options={})
     @icons ||= SVG.new(options)
+
+    if rails? && ::Rails.env != 'production' && @icons.modified?
+      @icons.read_icons
+    end
+
+    @icons
+  end
+
+  def rails?
+    defined?(Rails)
   end
 
   class SVG
@@ -36,13 +46,21 @@ module Esvg
     def initialize(options={})
       config(options)
 
+      @mtime = File.mtime(config[:path])
+      read_icons
+    end
+
+    def modified?
+      @mtime != File.mtime(config[:path])
+    end
+
+    def read_icons
       @files = {}
 
       find_files.each do |f|
         svg = File.read(f)
         @files[File.basename(f, ".*")] = SvgOptimizer.optimize(svg)
       end
-
     end
 
     def write_stylesheet
@@ -123,7 +141,7 @@ module Esvg
           CONFIG.merge(options)
         end
 
-        config.merge!(CONFIG_RAILS) if rails_mode
+        config.merge!(CONFIG_RAILS) if Esvg.rails?
         config.merge(options)
 
         config[:css_path]  ||= File.join(config[:output_path], 'esvg.scss')
@@ -132,10 +150,6 @@ module Esvg
 
         config
       end
-    end
-
-    def rails_mode
-      defined?(Rails)
     end
 
     def symbolize_keys(hash)
@@ -152,8 +166,12 @@ module Esvg
       dimensions.compact.join(' ')
     end
 
-    def icon_name(file)
-      name = dasherize(file)
+    def icon_name(name)
+      if @files[name].nil?
+        raise "No icon named #{name} exists at #{config[:path]}"
+      end
+
+      name = dasherize(name)
       if config[:namespace_after]
         "#{name}-#{config[:namespace]}"
       else
