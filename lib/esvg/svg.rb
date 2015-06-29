@@ -1,6 +1,5 @@
 module Esvg
   class SVG
-
     attr_accessor :files
 
     CONFIG = {
@@ -21,20 +20,23 @@ module Esvg
 
     def initialize(options={})
       config(options)
-
-      @mtime = File.mtime(config[:path])
       read_icons
     end
 
     def modified?
-      @mtime != File.mtime(config[:path])
+      mtime = File.mtime(find_files.last)
+      @mtime != mtime
     end
 
     def read_icons
       @files = {}
+      @mtime = {}
       @svgs  = {}
 
-      find_files.each do |f|
+      found = find_files
+      @mtime = File.mtime(found.last)
+
+      found.each do |f|
         svg = File.read(f)
         @files[File.basename(f, ".*")] = SvgOptimizer.optimize(svg)
       end
@@ -160,7 +162,7 @@ module Esvg
 
     def dimensions(input)
       dimensions = [] 
-      %w(viewBox).map do |dimension|
+      %w(viewBox height width).map do |dimension|
           dimensions << input.scan(/<svg.+(#{dimension}=["'].+?["'])/).flatten.first
       end
       dimensions.compact.join(' ')
@@ -186,7 +188,7 @@ module Esvg
     def find_files
       path = File.join(config[:path], '*.svg')
 
-      Dir[path].uniq
+      Dir[path].uniq.sort_by{ |f| File.mtime(f) }
     end
 
   end
