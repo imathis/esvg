@@ -1,10 +1,9 @@
 module Esvg::Helpers
-  def svg_html
-    Esvg::icons.html
+  def embed_svgs
+    Esvg.embed_svgs
   end
 
   def svg_icon(name, options={})
-    name = Esvg.icons.icon_name(name)
-    %Q{<svg class="icon #{name} #{options[:class] || ""}"><use xlink:href="##{name}"/></svg>}.html_safe
+    Esvg.svg_icon(name, options)
   end
 end
