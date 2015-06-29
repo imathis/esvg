@@ -23,16 +23,23 @@ Or install it yourself as:
 
 ## Usage: Rails
 
-Add SVG files to your `app/assets/svg_icons/` directory, then embed these SVGs in your application layout like this:
+Add SVG files to your `app/assets/svg_icons/` directory, then embed these SVGs in your application layout at the top of the `<body>`, like this:
 
 ```
-<head>
-...
+<body>
 <%= embed_svgs %>
-</head>
+...
+</body>
 ```
 
-To reference an SVG, use the `svg_icon` helper.
+To include only a subset of SVG icons on a page you can pass an array of icon names like this.
+
+```
+# Say we're on user/show
+<%= embed_svgs %w(siloutte gear menu) %>
+```
+
+To place an SVG icon, use the `svg_icon` helper.
 
 ```
 # Syntax: svg_icon name, [options]

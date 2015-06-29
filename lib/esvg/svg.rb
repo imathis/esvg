@@ -5,6 +5,7 @@ module Esvg
 
     CONFIG = {
       path: Dir.pwd,
+      base_class: 'svg-icon',
       namespace: 'icon',
       namespace_after: true,
       font_size: '1em',
@@ -31,6 +32,7 @@ module Esvg
 
     def read_icons
       @files = {}
+      @svgs  = {}
 
       find_files.each do |f|
         svg = File.read(f)
@@ -87,23 +89,34 @@ module Esvg
       styles.join("\n")
     end
 
-    def html
+    def html(names=[])
+      names = Array(names) # In case a single string is passed
+
       if @files.empty?
         ''
       else
-        svg = []
-        svg << %Q{<svg class="icon-symbols" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none">}
         files.each do |name, contents|
-          svg << contents.gsub(/<svg.+?>/, %Q{<symbol id="#{icon_name(name)}" #{dimensions(contents)}>})  # convert svg to symbols
+          @svgs[name] = contents.gsub(/<svg.+?>/, %Q{<symbol id="#{icon_name(name)}" #{dimensions(contents)}>})  # convert svg to symbols
                          .gsub(/<\/svg/, '</symbol')     # convert svg to symbols
                          .gsub(/style=['"].+?['"]/, '')  # remove inline styles
                          .gsub(/\n/, '')                 # remove endlines
                          .gsub(/\s{2,}/, ' ')            # remove whitespace
                          .gsub(/>\s+</, '><')            # remove whitespace between tags
         end
-        svg << %Q{</svg>}
-        svg.join("\n")
+
+        if names.empty?
+          icons = @svgs
+        else
+          icons = @svgs.select { |k,v| names.include?(k) }
+        end
+
+        %Q{<svg class="icon-symbols" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none">#{icons.values.join("\n")}</svg>}
       end
+    end
+
+    def svg_icon(name, options={})
+      name = icon_name(name)
+      %Q{<svg class="#{config[:base_class]} #{name} #{options[:class] || ""}"><use xlink:href="##{name}"/>#{title(options)}#{desc(options)}</svg>}.html_safe
     end
 
     def config(options={})
