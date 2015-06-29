@@ -119,6 +119,18 @@ module Esvg
       %Q{<svg class="#{config[:base_class]} #{name} #{options[:class] || ""}"><use xlink:href="##{name}"/>#{title(options)}#{desc(options)}</svg>}.html_safe
     end
 
+    def title(options)
+      if options[:title]
+        "<title>#{options[:title]}</title>"
+      end
+    end
+
+    def desc(options)
+      if options[:desc]
+        "<desc>#{options[:desc]}</desc>"
+      end
+    end
+
     def config(options={})
       @config ||= begin
         paths = [options[:config_file], 'config/esvg.yml', 'esvg.yml'].compact

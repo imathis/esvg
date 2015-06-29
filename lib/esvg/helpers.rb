@@ -1,6 +1,6 @@
 module Esvg::Helpers
   def embed_svgs(names=[])
-    Esvg.embed_svgs(Array(names))
+    Esvg.embed_svgs(names)
   end
 
   def svg_icon(name, options={})
