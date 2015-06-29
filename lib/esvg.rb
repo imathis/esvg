@@ -3,11 +3,17 @@ require "fileutils"
 
 require "esvg/version"
 if defined?(Rails)
-  require "esvg/railtie" 
   require "esvg/helpers" 
+  require "esvg/railties" 
 end
 
 module Esvg
+  extend self
+
+  def icons(options={})
+    @icons ||= SVG.new(options)
+  end
+
   class SVG
 
     attr_accessor :files
@@ -83,7 +89,7 @@ module Esvg
                     .gsub(/>/, '%3E') # escape >
                     .gsub(/#/, '%23') # escape #
                     .gsub(/\n/,'')    # remove newlines
-        styles << ".#{property_name(name)} { background-image: url('data:image/svg+xml;utf-8,#{f}'); @extend %svg-icon; }"
+        styles << ".#{icon_name(name)} { background-image: url('data:image/svg+xml;utf-8,#{f}'); @extend %svg-icon; }"
       end
       styles.join("\n")
     end
@@ -95,7 +101,7 @@ module Esvg
         svg = []
         svg << %Q{<svg class="icon-symbols" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none">}
         files.each do |name, contents|
-          svg << contents.gsub(/<svg.+?>/, %Q{<symbol id="#{property_name(name)}" #{dimensions(contents)}>})  # convert svg to symbols
+          svg << contents.gsub(/<svg.+?>/, %Q{<symbol id="#{icon_name(name)}" #{dimensions(contents)}>})  # convert svg to symbols
                          .gsub(/<\/svg/, '</symbol')     # convert svg to symbols
                          .gsub(/style=['"].+?['"]/, '')  # remove inline styles
                          .gsub(/\n/, '')                 # remove endlines
@@ -146,7 +152,7 @@ module Esvg
       dimensions.compact.join(' ')
     end
 
-    def property_name(file)
+    def icon_name(file)
       name = dasherize(file)
       if config[:namespace_after]
         "#{name}-#{config[:namespace]}"
