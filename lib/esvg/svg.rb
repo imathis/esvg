@@ -116,9 +116,9 @@ module Esvg
       end
     end
 
-    def svg_icon(name, options={})
-      name = icon_name(name)
-      %Q{<svg class="#{config[:base_class]} #{name} #{options[:class] || ""}"><use xlink:href="##{name}"/>#{title(options)}#{desc(options)}</svg>}.html_safe
+    def svg_icon(file, options={})
+      name = icon_name(file)
+      %Q{<svg class="#{config[:base_class]} #{name} #{options[:class] || ""}" #{dimensions(@files[file])}><use xlink:href="##{name}"/>#{title(options)}#{desc(options)}</svg>}.html_safe
     end
 
     def title(options)
