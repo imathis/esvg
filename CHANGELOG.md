@@ -1,5 +1,10 @@
 # Changelog
 
+### 1.1.2 (2015-06-30)
+
+- Fix: Measuring modified time works better now.
+- Fix: SVGs keep their dimensions when embedded.
+
 ### 1.1.1 (2015-06-29)
 
 - Fix: Moved methods from Esvg module to SVG class. Oops.
