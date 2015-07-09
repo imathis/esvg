@@ -125,15 +125,14 @@ module Esvg
           icons = @svgs.select { |k,v| names.include?(k) }
         end
 
-        %Q{<svg class="icon-symbols" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none">#{icons.values.join("\n")}</svg>}
+        %Q{<svg id="##{classname('svg-symbols')}" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none">#{icons.values.join("\n")}</svg>}
       end
     end
 
     def js
       %Q{var svg_icons = {
   embed: function(){
-    var exists = document.querySelector('.svg-icon-symbols')
-    if (!exists || exists.length == 0) {
+    if (!document.querySelector('##{classname('svg-symbols')}')) {
       document.querySelector('body').insertAdjacentHTML('afterbegin', '#{html.gsub(/\n/,'').gsub("'"){"\\'"}}')
     }
   }
@@ -162,13 +161,13 @@ module Esvg
         paths = [options[:config_file], 'config/esvg.yml', 'esvg.yml'].compact
 
         config = if path = paths.select{ |p| File.exist?(p)}.first
-          CONFIG.merge(symbolize_keys(YAML.load(File.read(path) || {}))).merge(options)
+          CONFIG.merge(symbolize_keys(YAML.load(File.read(path) || {})))
         else
-          CONFIG.merge(options)
+          CONFIG
         end
 
         config.merge!(CONFIG_RAILS) if Esvg.rails?
-        config.merge(options)
+        config.merge!(options)
 
         config[:css_path]  ||= File.join(config[:output_path], 'esvg.scss')
         config[:html_path] ||= File.join(config[:output_path], 'esvg.html')
@@ -196,7 +195,10 @@ module Esvg
       if @files[name].nil?
         raise "No icon named #{name} exists at #{config[:path]}"
       end
+      classname(name)
+    end
 
+    def classname(name)
       name = dasherize(name)
       if config[:namespace_after]
         "#{name}-#{config[:namespace]}"
