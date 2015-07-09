@@ -22,8 +22,8 @@ module Esvg
     @icons
   end
 
-  def embed_svgs(names=[])
-    icons.html(names).html_safe
+  def embed_svgs(options={})
+    icons.embed(options).html_safe
   end
 
   def svg_icon(name, options={})

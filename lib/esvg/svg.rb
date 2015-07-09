@@ -9,7 +9,9 @@ module Esvg
       namespace_after: true,
       font_size: '1em',
       stylesheet_embed: false,
-      output_path: Dir.pwd
+      output_path: Dir.pwd,
+      names: [],
+      format: 'html'
     }
 
     CONFIG_RAILS = {
@@ -21,6 +23,17 @@ module Esvg
     def initialize(options={})
       config(options)
       read_icons
+    end
+
+    def embed
+      case config[:format]
+      when "html"
+        html
+      when "js"
+        js
+      when "css", 'scss', 'sass'
+        stylesheet
+      end
     end
 
     def modified?
@@ -91,8 +104,8 @@ module Esvg
       styles.join("\n")
     end
 
-    def html(names=[])
-      names = Array(names) # In case a single string is passed
+    def html
+      names = Array(config[:names]) # In case a single string is passed
 
       if @files.empty?
         ''
@@ -114,6 +127,17 @@ module Esvg
 
         %Q{<svg class="icon-symbols" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none">#{icons.values.join("\n")}</svg>}
       end
+    end
+
+    def js
+      %Q{var svg_icons = {
+  embed: function(){
+    var exists = document.querySelector('.svg-icon-symbols')
+    if (!exists || exists.length == 0) {
+      document.querySelector('body').insertAdjacentHTML('afterbegin', '#{html.gsub(/\n/,'').gsub("'"){"\\'"}}')
+    }
+  }
+}}
     end
 
     def svg_icon(file, options={})
