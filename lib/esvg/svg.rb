@@ -131,8 +131,6 @@ module Esvg
 
     def js
       %Q{var esvg = {
-  setup: function() {
-  },
   embed: function(){
     if (!document.querySelector('#esvg-symbols')) {
       document.querySelector('body').insertAdjacentHTML('afterbegin', '#{html.gsub(/\n/,'').gsub("'"){"\\'"}}')
