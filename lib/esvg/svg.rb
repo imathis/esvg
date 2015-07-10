@@ -89,7 +89,7 @@ module Esvg
     end 
 
     def css
-      @cache[cache_name('css', config)] ||= begin
+      @cache['css'] ||= begin
         styles = []
         
         classes = files.keys.map{|k| ".#{icon_name(k)}"}.join(', ')
@@ -120,7 +120,7 @@ module Esvg
     end
 
     def html
-      @cache[cache_name('html', config)] ||= begin
+      @cache['html'] ||= begin
         if @files.empty?
           ''
         else
