@@ -1,7 +1,10 @@
 # Changelog
 
-### 1.2.0 (2015-07-09)
-- New: Now embed svgs in Javascript file for better caching, pass the option `format: 'js'`.
+### 2.0.0 (2015-07-10)
+- New: Embed via JS for cacheable icon symbols
+- New: Better integration with Rails
+- Change: CLI flags and options have been updated.
+- Change: CSS instead of Sass, for Stylesheet output.
 
 ### 1.1.2 (2015-06-30)
 
