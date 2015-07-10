@@ -1,0 +1,12 @@
+- 
+  title: "Test JS"
+  before: esvg svg_icons -o build
+  compare: expected/esvg.js build/esvg.js
+- 
+  title: "Test CSS"
+  before: esvg svg_icons -f css -o build
+  compare: expected/esvg.css build/esvg.css
+- 
+  title: "Test HTML"
+  before: esvg svg_icons -f html -o build
+  compare: expected/esvg.html build/esvg.html
