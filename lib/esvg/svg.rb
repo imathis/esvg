@@ -6,18 +6,15 @@ module Esvg
       path: Dir.pwd,
       base_class: 'svg-icon',
       namespace: 'icon',
-      namespace_after: true,
+      namespace_before: true,
       font_size: '1em',
-      stylesheet_embed: false,
       output_path: Dir.pwd,
       names: [],
-      format: 'html'
+      format: 'js'
     }
 
     CONFIG_RAILS = {
-      path: "app/assets/svg_icons",
-      css_path: "app/assets/stylesheets/_svg_icons.scss",
-      html_path: "app/views/shared/_svg_icons.html"
+      path: "app/assets/esvg"
     }
 
     def initialize(options={})
@@ -31,8 +28,8 @@ module Esvg
         html
       when "js"
         js
-      when "css", 'scss', 'sass'
-        stylesheet
+      when "css"
+        css
       end
     end
 
@@ -55,36 +52,52 @@ module Esvg
       end
     end
 
-    def write_stylesheet
-      unless @files.empty?
-        FileUtils.mkdir_p(File.expand_path(File.dirname(config[:css_path])))
+    def write
+      case config[:format]
+      when "html"
+        write_html
+      when "js"
+        write_js
+      when "css"
+        write_css
+      end
+    end
 
-        File.open(config[:css_path], 'w') do |io|
-          io.write(stylesheet)
-        end
+    def write_file(path, contents)
+      FileUtils.mkdir_p(File.expand_path(File.dirname(path)))
+      File.open(path, 'w') do |io|
+        io.write(contents)
+      end
+    end
+
+    def write_js
+      unless @files.empty?
+        write_file config[:js_path], js
+      end
+    end
+
+    def write_css
+      unless @files.empty?
+        write_file config[:css_path], css
       end
     end
     
     def write_html
       unless @files.empty?
-        FileUtils.mkdir_p(File.expand_path(File.dirname(config[:html_path])))
-
-        File.open(config[:html_path], 'w') do |io|
-          io.write(html)
-        end
+        write_file config[:html_path], html
       end
     end 
 
-    def stylesheet
+    def css
       styles = []
-      preamble = %Q{%svg-icon { 
+      
+      classes = files.keys.map{|k| ".#{icon_name(k)}"}.join(', ')
+      preamble = %Q{#{classes} { 
     clip: auto;
     font-size: #{config[:font_size]};
-    background: {
-      size: auto 1em;
-      repeat: no-repeat;
-      position: center center;
-    }
+    background-size: auto 1em;
+    background-repeat: no-repeat;
+    background-position: center center;
     display: inline-block;
     overflow: hidden;
     height: 1em;
@@ -99,7 +112,7 @@ module Esvg
                     .gsub(/>/, '%3E') # escape >
                     .gsub(/#/, '%23') # escape #
                     .gsub(/\n/,'')    # remove newlines
-        styles << ".#{icon_name(name)} { background-image: url('data:image/svg+xml;utf-8,#{f}'); @extend %svg-icon; }"
+        styles << ".#{icon_name(name)} { background-image: url('data:image/svg+xml;utf-8,#{f}'); }"
       end
       styles.join("\n")
     end
@@ -179,7 +192,8 @@ document.addEventListener("DOMContentLoaded", function(event) { esvg.embed() })
         config.merge!(CONFIG_RAILS) if Esvg.rails?
         config.merge!(options)
 
-        config[:css_path]  ||= File.join(config[:output_path], 'esvg.scss')
+        config[:js_path]   ||= File.join(config[:output_path], 'esvg.js')
+        config[:css_path]  ||= File.join(config[:output_path], 'esvg.css')
         config[:html_path] ||= File.join(config[:output_path], 'esvg.html')
         config.delete(:output_path)
 
@@ -210,10 +224,10 @@ document.addEventListener("DOMContentLoaded", function(event) { esvg.embed() })
 
     def classname(name)
       name = dasherize(name)
-      if config[:namespace_after]
-        "#{name}-#{config[:namespace]}"
-      else
+      if config[:namespace_before]
         "#{config[:namespace]}-#{name}"
+      else
+        "#{name}-#{config[:namespace]}"
       end
     end
 
