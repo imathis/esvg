@@ -1,5 +1,8 @@
 # Changelog
 
+### 2.0.2 (2015-07-10)
+- Fix: Caching on just about everything.
+
 ### 2.0.1 (2015-07-10)
 - Fix: Caching icons again is fixed.
 
