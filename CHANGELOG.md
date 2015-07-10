@@ -1,5 +1,8 @@
 # Changelog
 
+### 1.2.0 (2015-07-09)
+- New: Now embed svgs in Javascript file for better caching, pass the option `format: 'js'`.
+
 ### 1.1.2 (2015-06-30)
 
 - Fix: Measuring modified time works better now.

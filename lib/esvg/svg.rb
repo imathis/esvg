@@ -130,13 +130,25 @@ module Esvg
     end
 
     def js
-      %Q{var svg_icons = {
+      %Q{var esvg = {
+  setup: function() {
+  },
   embed: function(){
     if (!document.querySelector('##{classname('svg-symbols')}')) {
       document.querySelector('body').insertAdjacentHTML('afterbegin', '#{html.gsub(/\n/,'').gsub("'"){"\\'"}}')
     }
   }
-}}
+}
+
+// If DOM is already ready, embed SVGs
+if (document.readyState == 'interactive') { esvg.embed() }
+
+// Handle Turbolinks (or other things that fire page change events)
+document.addEventListener("page:change", function(event) { esvg.embed() })
+
+// Handle standard DOM ready events
+document.addEventListener("DOMContentLoaded", function(event) { esvg.embed() })
+}
     end
 
     def svg_icon(file, options={})
