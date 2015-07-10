@@ -125,7 +125,7 @@ module Esvg
           icons = @svgs.select { |k,v| names.include?(k) }
         end
 
-        %Q{<svg id="##{classname('svg-symbols')}" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none">#{icons.values.join("\n")}</svg>}
+        %Q{<svg id="esvg-symbols" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none">#{icons.values.join("\n")}</svg>}
       end
     end
 
@@ -134,7 +134,7 @@ module Esvg
   setup: function() {
   },
   embed: function(){
-    if (!document.querySelector('##{classname('svg-symbols')}')) {
+    if (!document.querySelector('#esvg-symbols')) {
       document.querySelector('body').insertAdjacentHTML('afterbegin', '#{html.gsub(/\n/,'').gsub("'"){"\\'"}}')
     }
   }
