@@ -13,7 +13,7 @@ module Esvg
   extend self
 
   def icons(options={})
-    @icons = SVG.new(options)
+    @icons ||= SVG.new(options)
 
     if rails? && ::Rails.env != 'production' && @icons.modified?
       @icons.read_icons

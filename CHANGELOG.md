@@ -1,5 +1,8 @@
 # Changelog
 
+### 2.0.1 (2015-07-10)
+- Fix: Caching icons again is fixed.
+
 ### 2.0.0 (2015-07-10)
 - New: Embed via JS for cacheable icon symbols
 - New: Better integration with Rails
