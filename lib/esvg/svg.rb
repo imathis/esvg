@@ -9,7 +9,6 @@ module Esvg
       namespace_before: true,
       font_size: '1em',
       output_path: Dir.pwd,
-      names: [],
       format: 'js'
     }
 
@@ -20,9 +19,11 @@ module Esvg
     def initialize(options={})
       config(options)
       read_icons
+      @cache = {}
     end
 
     def embed
+      return if @files.empty?
       case config[:format]
       when "html"
         html
@@ -36,6 +37,10 @@ module Esvg
     def modified?
       mtime = File.mtime(find_files.last)
       @mtime != mtime
+    end
+
+    def cache_name(input, options)
+      input + options.flatten.join('-')
     end
 
     def read_icons
@@ -53,6 +58,7 @@ module Esvg
     end
 
     def write
+      return if @files.empty?
       case config[:format]
       when "html"
         write_html
@@ -71,79 +77,72 @@ module Esvg
     end
 
     def write_js
-      unless @files.empty?
-        write_file config[:js_path], js
-      end
+      write_file config[:js_path], js
     end
 
     def write_css
-      unless @files.empty?
-        write_file config[:css_path], css
-      end
+      write_file config[:css_path], css
     end
     
     def write_html
-      unless @files.empty?
-        write_file config[:html_path], html
-      end
+      write_file config[:html_path], html
     end 
 
     def css
-      styles = []
-      
-      classes = files.keys.map{|k| ".#{icon_name(k)}"}.join(', ')
-      preamble = %Q{#{classes} { 
-    clip: auto;
-    font-size: #{config[:font_size]};
-    background-size: auto 1em;
-    background-repeat: no-repeat;
-    background-position: center center;
-    display: inline-block;
-    overflow: hidden;
-    height: 1em;
-    width: 1em;
-    color: transparent;
-    vertical-align: middle;
-  }}
-      styles << preamble
+      @cache[cache_name('css', config)] ||= begin
+        styles = []
+        
+        classes = files.keys.map{|k| ".#{icon_name(k)}"}.join(', ')
+        preamble = %Q{#{classes} { 
+  clip: auto;
+  font-size: #{config[:font_size]};
+  background-size: auto 1em;
+  background-repeat: no-repeat;
+  background-position: center center;
+  display: inline-block;
+  overflow: hidden;
+  height: 1em;
+  width: 1em;
+  color: transparent;
+  vertical-align: middle;
+}}
+        styles << preamble
 
-      files.each do |name, contents|
-        f = contents.gsub(/</, '%3C') # escape <
-                    .gsub(/>/, '%3E') # escape >
-                    .gsub(/#/, '%23') # escape #
-                    .gsub(/\n/,'')    # remove newlines
-        styles << ".#{icon_name(name)} { background-image: url('data:image/svg+xml;utf-8,#{f}'); }"
+        files.each do |name, contents|
+          f = contents.gsub(/</, '%3C') # escape <
+                      .gsub(/>/, '%3E') # escape >
+                      .gsub(/#/, '%23') # escape #
+                      .gsub(/\n/,'')    # remove newlines
+          styles << ".#{icon_name(name)} { background-image: url('data:image/svg+xml;utf-8,#{f}'); }"
+        end
+        styles.join("\n")
       end
-      styles.join("\n")
     end
 
     def html
-      names = Array(config[:names]) # In case a single string is passed
-
-      if @files.empty?
-        ''
-      else
-        files.each do |name, contents|
-          @svgs[name] = contents.gsub(/<svg.+?>/, %Q{<symbol id="#{icon_name(name)}" #{dimensions(contents)}>})  # convert svg to symbols
-                         .gsub(/<\/svg/, '</symbol')     # convert svg to symbols
-                         .gsub(/style=['"].+?['"]/, '')  # remove inline styles
-                         .gsub(/\n/, '')                 # remove endlines
-                         .gsub(/\s{2,}/, ' ')            # remove whitespace
-                         .gsub(/>\s+</, '><')            # remove whitespace between tags
-        end
-
-        if names.empty?
-          icons = @svgs
+      @cache[cache_name('html', config)] ||= begin
+        if @files.empty?
+          ''
         else
-          icons = @svgs.select { |k,v| names.include?(k) }
-        end
+          files.each do |name, contents|
+            @svgs[name] = contents.gsub(/<svg.+?>/, %Q{<symbol id="#{icon_name(name)}" #{dimensions(contents)}>})  # convert svg to symbols
+                           .gsub(/<\/svg/, '</symbol')     # convert svg to symbols
+                           .gsub(/style=['"].+?['"]/, '')  # remove inline styles
+                           .gsub(/\n/, '')                 # remove endlines
+                           .gsub(/\s{2,}/, ' ')            # remove whitespace
+                           .gsub(/>\s+</, '><')            # remove whitespace between tags
+          end
 
-        %Q{<svg id="esvg-symbols" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none">#{icons.values.join("\n")}</svg>}
+          icons = @svgs
+
+          %Q{<svg id="esvg-symbols" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none">#{icons.values.join("\n")}</svg>}
+        end
       end
     end
 
     def js
-      %Q{var esvg = {
+      @cache['js'] ||= begin
+        %Q{var esvg = {
   embed: function(){
     if (!document.querySelector('#esvg-symbols')) {
       document.querySelector('body').insertAdjacentHTML('afterbegin', '#{html.gsub(/\n/,'').gsub("'"){"\\'"}}')
@@ -160,11 +159,14 @@ document.addEventListener("page:change", function(event) { esvg.embed() })
 // Handle standard DOM ready events
 document.addEventListener("DOMContentLoaded", function(event) { esvg.embed() })
 }
+      end
     end
 
     def svg_icon(file, options={})
-      name = icon_name(file)
-      %Q{<svg class="#{config[:base_class]} #{name} #{options[:class] || ""}" #{dimensions(@files[file])}><use xlink:href="##{name}"/>#{title(options)}#{desc(options)}</svg>}.html_safe
+      @cache[cache_name(file, options)] ||= begin 
+        name = icon_name(file)
+        %Q{<svg class="#{config[:base_class]} #{name} #{options[:class] || ""}" #{dimensions(@files[file])}><use xlink:href="##{name}"/>#{title(options)}#{desc(options)}</svg>}
+      end
     end
 
     def title(options)
