@@ -8,25 +8,19 @@ require 'esvg'
 options = {}
 
 OptionParser.new do |opts|
-  opts.on("-s", "--stylesheet", "Embed SVGs in Sass file") do
-    options[:stylesheet_embed] = true
+  opts.on("-f", "--format TYPE", String, "Options: css, js, html (defaults to js)") do |format|
+    options[:format] = format
   end
 
-  opts.on("-c", "--config PATH", String, "Path to a config file (default: esvg.yml or config/esvg.yml)") do |path|
-    options[:config_file] = path
-  end
-
-  opts.on("-o", "--output PATH", String, "Where should SCSS/HTML files be written, (default: current directory)") do |path|
+  opts.on("-o", "--output PATH", String, "Where should JS/SCSS/HTML files be written, (default: current directory)") do |path|
     options[:output_path] = path
+  end
+
+  opts.on("-c", "--config PATH", String, "Path to a config file (default: esvg.yml, config/esvg.yml)") do |path|
+    options[:config_file] = path
   end
 end.parse!
 
 options[:path] = ARGV.shift
 
-esvg = Esvg::SVG.new(options)
-
-if options[:stylesheet_embed]
-  esvg.write_stylesheet
-else
-  esvg.write_html
-end
+esvg = Esvg::SVG.new(options).write
