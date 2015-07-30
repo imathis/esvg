@@ -77,13 +77,11 @@ module Esvg
     # Optiize all svg source files
     #
     def optimize
-      find_files.each do |file|
-        if svgo?
-          puts "Optimzing #{file}"
-          system "svgo #{file}"
-        else
-          abort 'To optimize files, please install svgo; `npm install svgo -g`'
-        end
+      if svgo?
+        puts "Optimzing #{config[:path]}"
+        system "svgo -f #{config[:path]}"
+      else
+        abort 'To optimize files, please install svgo; `npm install svgo -g`'
       end
     end
 
