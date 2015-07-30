@@ -1,4 +1,3 @@
-require "svg_optimizer"
 require "fileutils"
 
 require "esvg/version"

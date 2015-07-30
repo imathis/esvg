@@ -6,6 +6,7 @@ module Esvg
       path: Dir.pwd,
       base_class: 'svg-icon',
       namespace: 'icon',
+      optimize: false,
       namespace_before: true,
       font_size: '1em',
       output_path: Dir.pwd,
@@ -39,8 +40,22 @@ module Esvg
       @mtime != mtime
     end
 
+    def svgo?
+      @has_svgo ||= begin
+        config[:optimize] && !(`npm ls -g svgo`.match(/empty/) && `npm ls svgo`.match(/emtpy/))
+      end
+    end
+
     def cache_name(input, options)
       input + options.flatten.join('-')
+    end
+
+    def optimize(file)
+      if svgo?
+        `svgo #{file} -o -`
+      else
+        File.read(file)
+      end
     end
 
     def read_icons
@@ -52,8 +67,7 @@ module Esvg
       @mtime = File.mtime(found.last)
 
       found.each do |f|
-        svg = File.read(f)
-        @files[File.basename(f, ".*")] = SvgOptimizer.optimize(svg)
+        @files[File.basename(f, ".*")] = optimize(f)
       end
     end
 
