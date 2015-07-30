@@ -43,21 +43,13 @@ module Esvg
     end
 
     def svgo?
-      @has_svgo ||= begin
-        config[:optimize] && !(`npm ls -g svgo`.match(/empty/) && `npm ls svgo`.match(/emtpy/))
+      @svgo ||= begin
+         !(`npm ls -g svgo`.match(/empty/) && `npm ls svgo`.match(/emtpy/))
       end
     end
 
     def cache_name(input, options)
       input + options.flatten.join('-')
-    end
-
-    def optimize(file)
-      if svgo?
-        `svgo #{file} -o -`
-      else
-        File.read(file)
-      end
     end
 
     def read_icons
@@ -69,7 +61,29 @@ module Esvg
       @mtime = File.mtime(found.last)
 
       found.each do |f|
-        @files[File.basename(f, ".*")] = optimize(f)
+        @files[File.basename(f, ".*")] = read(f)
+      end
+    end
+
+    def read(file)
+      if config[:optimize] && svgo?
+        # Compress files outputting to $STDOUT
+        `svgo #{file} -o -`
+      else
+        File.read(file)
+      end
+    end
+
+    # Optiize all svg source files
+    #
+    def optimize
+      find_files.each do |file|
+        if svgo?
+          puts "Optimzing #{file}"
+          system "svgo #{file}"
+        else
+          abort 'To optimize files, please install svgo; `npm install svgo -g`'
+        end
       end
     end
 

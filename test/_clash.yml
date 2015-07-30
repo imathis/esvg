@@ -14,3 +14,10 @@
   title: "Test SVGO JS"
   before: esvg svg_icons -o build -c _svgo.yml
   compare: expected/svgo/esvg.js build/esvg.js
+- 
+  title: "Test Mass SVGO"
+  before:
+    - rm -rf optimized
+    - cp -r svg_icons optimized
+    - esvgo optimized
+  compare: expected/svgo/comments.svg optimized/comments.svg
