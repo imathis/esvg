@@ -1,12 +1,16 @@
 - 
   title: "Test JS"
   before: esvg svg_icons -o build
-  compare: expected/esvg.js build/esvg.js
+  compare: expected/standard/esvg.js build/esvg.js
 - 
   title: "Test CSS"
   before: esvg svg_icons -f css -o build
-  compare: expected/esvg.css build/esvg.css
+  compare: expected/standard/esvg.css build/esvg.css
 - 
   title: "Test HTML"
   before: esvg svg_icons -f html -o build
-  compare: expected/esvg.html build/esvg.html
+  compare: expected/standard/esvg.html build/esvg.html
+- 
+  title: "Test SVGO JS"
+  before: esvg svg_icons -o build -c _svgo.yml
+  compare: expected/svgo/esvg.js build/esvg.js

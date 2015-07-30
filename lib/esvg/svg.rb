@@ -1,3 +1,5 @@
+require 'yaml'
+
 module Esvg
   class SVG
     attr_accessor :files
