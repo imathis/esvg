@@ -28,7 +28,7 @@ Or install it yourself as:
 
 ## Usage: Rails
 
-First, add SVG files to your `app/assets/svg_icons/` directory.
+First, add SVG files to your `app/assets/esvg/` directory.
 
 ### Inject SVG symbols
 
