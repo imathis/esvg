@@ -2,7 +2,7 @@ require 'yaml'
 
 module Esvg
   class SVG
-    attr_accessor :files
+    attr_accessor :files, :svgs
 
     CONFIG = {
       path: Dir.pwd,
