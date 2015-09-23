@@ -213,13 +213,13 @@ document.addEventListener("DOMContentLoaded", function(event) { esvg.embed() })
       @config ||= begin
         paths = [options[:config_file], 'config/esvg.yml', 'esvg.yml'].compact
 
-        config = if path = paths.select{ |p| File.exist?(p)}.first
-          CONFIG.merge(symbolize_keys(YAML.load(File.read(path) || {})))
-        else
-          CONFIG
+        config = CONFIG
+        config.merge!(CONFIG_RAILS) if Esvg.rails?
+
+        if path = paths.select{ |p| File.exist?(p)}.first
+          config.merge!(symbolize_keys(YAML.load(File.read(path) || {})))
         end
 
-        config.merge!(CONFIG_RAILS) if Esvg.rails?
         config.merge!(options)
 
         config[:js_path]   ||= File.join(config[:output_path], 'esvg.js')
