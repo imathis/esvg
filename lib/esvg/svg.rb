@@ -175,6 +175,20 @@ module Esvg
     if (!document.querySelector('#esvg-symbols')) {
       document.querySelector('body').insertAdjacentHTML('afterbegin', '#{html.gsub(/\n/,'').gsub("'"){"\\'"}}')
     }
+  },
+  icon: function(name, class) {
+    if (document.querySelector('#'+this.dasherize(name))) {
+      return '<svg class="#{config[:base_class]} '+name+' '+classname+'" '+this.dimensions(name)+'><use xlink:href="#'+name+'"/></svg>'
+    } else {
+      console.error('No icon named "'+name+'" exists at #{config[:path]}')
+    }
+  },
+  dimensions: function(name) {
+    el = document.querySelector('#'+this.dasherize(name))
+    return 'viewBox="'+el.getAttribute('viewBox')+'" width="'+el.getAttribute('width')+'" height="'+el.getAttribute('height')+'"'
+  },
+  dasherize: function(input) {
+    return input.replace(/[\W,_]/g, '-').replace(/-{2,}/g, '-')
   }
 }
 
@@ -266,7 +280,7 @@ document.addEventListener("DOMContentLoaded", function(event) { esvg.embed() })
     end
 
     def dasherize(input)
-      input.gsub(/\W/, '-').gsub(/-{2,}/, '-')
+      input.gsub(/[\W,_]/, '-').gsub(/-{2,}/, '-')
     end
 
     def find_files
