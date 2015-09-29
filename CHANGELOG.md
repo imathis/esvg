@@ -3,6 +3,10 @@
 ### 2.1.0 (2015-09-23)
 - Minor: `Esvg.icons.svgs` will now return the hash of svgs.
 
+### 2.1.0 (2015-09-28)
+- Fix: Ensure that symbols are converted to strings.
+- Fix: Expand pahts for better error messages.
+
 ### 2.0.3 (2015-09-23)
 - Fix: Fixed configuration merge order
 

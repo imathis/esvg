@@ -49,7 +49,7 @@ module Esvg
     end
 
     def cache_name(input, options)
-      input + options.flatten.join('-')
+      "#{input}#{options.flatten.join('-')}"
     end
 
     def read_icons
@@ -191,6 +191,7 @@ document.addEventListener("DOMContentLoaded", function(event) { esvg.embed() })
     end
 
     def svg_icon(file, options={})
+      file = file.to_s
       @cache[cache_name(file, options)] ||= begin 
         name = icon_name(file)
         %Q{<svg class="#{config[:base_class]} #{name} #{options[:class] || ""}" #{dimensions(@files[file])}><use xlink:href="##{name}"/>#{title(options)}#{desc(options)}</svg>}
@@ -222,6 +223,9 @@ document.addEventListener("DOMContentLoaded", function(event) { esvg.embed() })
 
         config.merge!(options)
 
+        config[:path] = File.expand_path(config[:path])
+        config[:output_path] = File.expand_path(config[:output_path])
+
         config[:js_path]   ||= File.join(config[:output_path], 'esvg.js')
         config[:css_path]  ||= File.join(config[:output_path], 'esvg.css')
         config[:html_path] ||= File.join(config[:output_path], 'esvg.html')
@@ -247,7 +251,7 @@ document.addEventListener("DOMContentLoaded", function(event) { esvg.embed() })
 
     def icon_name(name)
       if @files[name].nil?
-        raise "No icon named #{name} exists at #{config[:path]}"
+        raise "No icon named '#{name}' exists at #{config[:path]}"
       end
       classname(name)
     end
@@ -266,7 +270,7 @@ document.addEventListener("DOMContentLoaded", function(event) { esvg.embed() })
     end
 
     def find_files
-      path = File.join(config[:path], '*.svg')
+      path = File.expand_path(File.join(config[:path], '*.svg'))
 
       Dir[path].uniq.sort_by{ |f| File.mtime(f) }
     end
