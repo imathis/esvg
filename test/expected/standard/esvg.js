@@ -5,13 +5,21 @@ var esvg = {
     }
   },
   icon: function(name, classnames) {
-    var svgName = this.dasherize(name)
+    var svgName = this.iconName(name)
     var element = document.querySelector('#'+svgName)
 
     if (element) {
-      return '<svg class="svg-icon '+svgName+' '+classnames+'" '+this.dimensions(element)+'><use xlink:href="#'+svgName+'"/></svg>'
+      return '<svg class="svg-icon '+svgName+' '+(classnames || '')+'" '+this.dimensions(element)+'><use xlink:href="#'+svgName+'"/></svg>'
     } else {
       console.error('File not found: "'+name+'.svg" at svg_icons/')
+    }
+  },
+  iconName: function(name) {
+    var before = true
+    if (before) {
+      return "icon-"+this.dasherize(name)
+    } else {
+      return name+"-icon"
     }
   },
   dimensions: function(el) {
@@ -30,3 +38,6 @@ document.addEventListener("page:change", function(event) { esvg.embed() })
 
 // Handle standard DOM ready events
 document.addEventListener("DOMContentLoaded", function(event) { esvg.embed() })
+
+// Work with module exports:
+if(typeof(module) != 'undefined') { module.exports = esvg }
