@@ -1,6 +1,10 @@
 # Changelog
 
-### 2.1.0 (2015-09-23)
+### 2.2.0 (2015-09-30)
+- New: New javascript helpers make it easier to inject SVG icons into javascript templates.
+- New: Javascript works with module.exports if you're building Javascripts with a module requiring system.
+
+### 2.1.1 (2015-09-29)
 - Minor: `Esvg.icons.svgs` will now return the hash of svgs.
 
 ### 2.1.0 (2015-09-28)
