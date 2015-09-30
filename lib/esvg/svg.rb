@@ -69,7 +69,6 @@ module Esvg
     def read(file)
       if config[:optimize] && svgo?
         # Compress files outputting to $STDOUT
-        raise "encoding!"
         `svgo #{file} -o -`
       else
         File.read(file)
