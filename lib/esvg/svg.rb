@@ -12,6 +12,7 @@ module Esvg
       namespace_before: true,
       font_size: '1em',
       output_path: Dir.pwd,
+      verbose: false,
       format: 'js'
     }
 
@@ -68,6 +69,7 @@ module Esvg
     def read(file)
       if config[:optimize] && svgo?
         # Compress files outputting to $STDOUT
+        raise "encoding!"
         `svgo #{file} -o -`
       else
         File.read(file)
@@ -122,17 +124,20 @@ module Esvg
         
         classes = files.keys.map{|k| ".#{icon_name(k)}"}.join(', ')
         preamble = %Q{#{classes} { 
-  clip: auto;
   font-size: #{config[:font_size]};
-  background-size: auto 1em;
+  clip: auto;
+  background-size: auto;
   background-repeat: no-repeat;
   background-position: center center;
   display: inline-block;
   overflow: hidden;
+  background-size: auto 1em;
   height: 1em;
   width: 1em;
-  color: transparent;
+  color: inherit;
+  fill: currentColor;
   vertical-align: middle;
+  line-height: 1em;
 }}
         styles << preamble
 
@@ -176,15 +181,17 @@ module Esvg
       document.querySelector('body').insertAdjacentHTML('afterbegin', '#{html.gsub(/\n/,'').gsub("'"){"\\'"}}')
     }
   },
-  icon: function(name, class) {
-    if (document.querySelector('#'+this.dasherize(name))) {
-      return '<svg class="#{config[:base_class]} '+name+' '+classname+'" '+this.dimensions(name)+'><use xlink:href="#'+name+'"/></svg>'
+  icon: function(name, classnames) {
+    var svgName = this.dasherize(name)
+    var element = document.querySelector('#'+svgName)
+
+    if (element) {
+      return '<svg class="#{config[:base_class]} '+svgName+' '+classnames+'" '+this.dimensions(element)+'><use xlink:href="#'+svgName+'"/></svg>'
     } else {
-      console.error('No icon named "'+name+'" exists at #{config[:path]}')
+      console.error('File not found: "'+name+'.svg" at #{File.join(config[:path],'')}')
     }
   },
-  dimensions: function(name) {
-    el = document.querySelector('#'+this.dasherize(name))
+  dimensions: function(el) {
     return 'viewBox="'+el.getAttribute('viewBox')+'" width="'+el.getAttribute('width')+'" height="'+el.getAttribute('height')+'"'
   },
   dasherize: function(input) {
@@ -237,8 +244,10 @@ document.addEventListener("DOMContentLoaded", function(event) { esvg.embed() })
 
         config.merge!(options)
 
-        config[:path] = File.expand_path(config[:path])
-        config[:output_path] = File.expand_path(config[:output_path])
+        if config[:verbose]
+          config[:path] = File.expand_path(config[:path])
+          config[:output_path] = File.expand_path(config[:output_path])
+        end
 
         config[:js_path]   ||= File.join(config[:output_path], 'esvg.js')
         config[:css_path]  ||= File.join(config[:output_path], 'esvg.css')
