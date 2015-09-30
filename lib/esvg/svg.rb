@@ -181,13 +181,21 @@ module Esvg
     }
   },
   icon: function(name, classnames) {
-    var svgName = this.dasherize(name)
+    var svgName = this.iconName(name)
     var element = document.querySelector('#'+svgName)
 
     if (element) {
-      return '<svg class="#{config[:base_class]} '+svgName+' '+classnames+'" '+this.dimensions(element)+'><use xlink:href="#'+svgName+'"/></svg>'
+      return '<svg class="#{config[:base_class]} '+svgName+' '+(classnames || '')+'" '+this.dimensions(element)+'><use xlink:href="#'+svgName+'"/></svg>'
     } else {
       console.error('File not found: "'+name+'.svg" at #{File.join(config[:path],'')}')
+    }
+  },
+  iconName: function(name) {
+    var before = #{config[:namespace_before]}
+    if (before) {
+      return "#{config[:namespace]}-"+this.dasherize(name)
+    } else {
+      return name+"-#{config[:namespace]}"
     }
   },
   dimensions: function(el) {
@@ -206,6 +214,9 @@ document.addEventListener("page:change", function(event) { esvg.embed() })
 
 // Handle standard DOM ready events
 document.addEventListener("DOMContentLoaded", function(event) { esvg.embed() })
+
+// Work with module exports:
+if(typeof(module) != 'undefined') { module.exports = esvg }
 }
       end
     end
