@@ -19,5 +19,5 @@
   before:
     - rm -rf optimized
     - cp -r svg_icons optimized
-    - esvgo optimized
+    - svgo optimized
   compare: expected/svgo/comments.svg optimized/comments.svg
