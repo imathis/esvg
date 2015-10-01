@@ -1,5 +1,8 @@
 # Changelog
 
+### 2.2.1 (2015-10-01)
+- Fix: If no icons are found, it's cool, don't freak out.
+
 ### 2.2.0 (2015-09-30)
 - New: New javascript helpers make it easier to inject SVG icons into javascript templates.
 - New: Javascript works with module.exports if you're building Javascripts with a module requiring system.
