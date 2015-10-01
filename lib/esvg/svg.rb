@@ -56,12 +56,16 @@ module Esvg
       found = find_files
 
       if found.size > 0
-        found = found.sort_by{ |f| File.mtime(f) }
-        @mtime = File.mtime(found.last)
+        last = found.sort_by{ |f| File.mtime(f) }.last
+        @mtime = File.mtime(last)
+      end
 
-        found.each do |f|
-          @files[File.basename(f, ".*")] = read(f)
-        end
+      found.each do |f|
+        @files[File.basename(f, ".*")] = read(f)
+      end
+
+      if @files.empty? && config[:verbose]
+        puts "No icons found at #{config[:path]}"
       end
     end
 
