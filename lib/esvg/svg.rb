@@ -38,11 +38,6 @@ module Esvg
       end
     end
 
-    def modified?
-      mtime = File.mtime(find_files.last)
-      @mtime != mtime
-    end
-
     def svgo?
       @svgo ||= begin
          !(`npm ls -g svgo`.match(/empty/) && `npm ls svgo`.match(/emtpy/))
@@ -59,10 +54,14 @@ module Esvg
       @svgs  = {}
 
       found = find_files
-      @mtime = File.mtime(found.last)
 
-      found.each do |f|
-        @files[File.basename(f, ".*")] = read(f)
+      if found.size > 0
+        found = found.sort_by{ |f| File.mtime(f) }
+        @mtime = File.mtime(found.last)
+
+        found.each do |f|
+          @files[File.basename(f, ".*")] = read(f)
+        end
       end
     end
 
@@ -304,8 +303,7 @@ if(typeof(module) != 'undefined') { module.exports = esvg }
 
     def find_files
       path = File.expand_path(File.join(config[:path], '*.svg'))
-
-      Dir[path].uniq.sort_by{ |f| File.mtime(f) }
+      Dir[path].uniq
     end
 
   end
