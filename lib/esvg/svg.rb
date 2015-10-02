@@ -26,6 +26,10 @@ module Esvg
       @cache = {}
     end
 
+    def modified?
+      @mtime != last_modified(find_files)
+    end
+
     def embed
       return if @files.empty?
       case config[:format]
@@ -50,15 +54,10 @@ module Esvg
 
     def read_icons
       @files = {}
-      @mtime = {}
       @svgs  = {}
 
       found = find_files
-
-      if found.size > 0
-        last = found.sort_by{ |f| File.mtime(f) }.last
-        @mtime = File.mtime(last)
-      end
+      @mtime = last_modified(found)
 
       found.each do |f|
         @files[File.basename(f, ".*")] = read(f)
@@ -66,6 +65,12 @@ module Esvg
 
       if @files.empty? && config[:verbose]
         puts "No icons found at #{config[:path]}"
+      end
+    end
+
+    def last_modified(files)
+      if files.size > 0
+        File.mtime(files.sort_by{ |f| File.mtime(f) }.last)
       end
     end
 
