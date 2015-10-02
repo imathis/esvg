@@ -1,5 +1,8 @@
 # Changelog
 
+### 2.2.3 (2015-10-02)
+- Fix: Dasherize input when embedding icons from the ruby helper.
+
 ### 2.2.2 (2015-10-02)
 - Fix: Improved lookup of last-modified file.
 

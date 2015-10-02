@@ -60,7 +60,7 @@ module Esvg
       @mtime = last_modified(found)
 
       found.each do |f|
-        @files[File.basename(f, ".*")] = read(f)
+        @files[dasherize(File.basename(f, ".*"))] = read(f)
       end
 
       if @files.empty? && config[:verbose]
@@ -230,7 +230,7 @@ if(typeof(module) != 'undefined') { module.exports = esvg }
     end
 
     def svg_icon(file, options={})
-      file = file.to_s
+      file = dasherize(file.to_s)
       @cache[cache_name(file, options)] ||= begin 
         name = icon_name(file)
         %Q{<svg class="#{config[:base_class]} #{name} #{options[:class] || ""}" #{dimensions(@files[file])}><use xlink:href="##{name}"/>#{title(options)}#{desc(options)}</svg>}
