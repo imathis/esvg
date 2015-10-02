@@ -1,5 +1,8 @@
 # Changelog
 
+### 2.2.4 (2015-10-02)
+- Fix: Esvg load function happens inside of the module now
+
 ### 2.2.3 (2015-10-02)
 - Fix: Dasherize input when embedding icons from the ruby helper.
 
