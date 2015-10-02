@@ -33,10 +33,10 @@ var esvg = {
     if (document.readyState == 'interactive') { this.embed() }
 
     // Handle Turbolinks (or other things that fire page change events)
-    document.addEventListener("page:change", function(event) { this.embed() })
+    document.addEventListener("page:change", function(event) { this.embed() }.bind(this))
 
     // Handle standard DOM ready events
-    document.addEventListener("DOMContentLoaded", function(event) { this.embed() })
+    document.addEventListener("DOMContentLoaded", function(event) { this.embed() }.bind(this))
   }
 }
 
