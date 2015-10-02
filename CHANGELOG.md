@@ -1,5 +1,8 @@
 # Changelog
 
+### 2.2.2 (2015-10-02)
+- Fix: Improved lookup of last-modified file.
+
 ### 2.2.1 (2015-10-01)
 - Fix: If no icons are found, it's cool, don't freak out.
 
