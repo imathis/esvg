@@ -211,17 +211,20 @@ module Esvg
   },
   dasherize: function(input) {
     return input.replace(/[\W,_]/g, '-').replace(/-{2,}/g, '-')
+  },
+  load: function(){
+    // If DOM is already ready, embed SVGs
+    if (document.readyState == 'interactive') { this.embed() }
+
+    // Handle Turbolinks (or other things that fire page change events)
+    document.addEventListener("page:change", function(event) { this.embed() })
+
+    // Handle standard DOM ready events
+    document.addEventListener("DOMContentLoaded", function(event) { this.embed() })
   }
 }
 
-// If DOM is already ready, embed SVGs
-if (document.readyState == 'interactive') { esvg.embed() }
-
-// Handle Turbolinks (or other things that fire page change events)
-document.addEventListener("page:change", function(event) { esvg.embed() })
-
-// Handle standard DOM ready events
-document.addEventListener("DOMContentLoaded", function(event) { esvg.embed() })
+esvg.load()
 
 // Work with module exports:
 if(typeof(module) != 'undefined') { module.exports = esvg }
