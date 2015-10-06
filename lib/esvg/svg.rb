@@ -286,11 +286,13 @@ if(typeof(module) != 'undefined') { module.exports = esvg }
     end
 
     def dimensions(input)
-      dimensions = [] 
-      %w(viewBox height width).map do |dimension|
-          dimensions << input.scan(/<svg.+(#{dimension}=["'].+?["'])/).flatten.first
-      end
-      dimensions.compact.join(' ')
+      dimension = input.scan(/<svg.+(viewBox=["'](.+?)["'])/).flatten
+      viewbox = dimension.first
+      coords = dimension.last.split(' ')
+
+      width = coords[2].to_i - coords[0].to_i
+      height = coords[3].to_i - coords[1].to_i
+      %Q{#{viewbox} width="#{width}" height="#{height}"}
     end
 
     def icon_name(name)
