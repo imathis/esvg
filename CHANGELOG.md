@@ -1,5 +1,8 @@
 # Changelog
 
+### 2.2.5 (2015-10-05)
+- New: Now using viewport size to write svg dimensions. Some editors export SVG as 100% width and height, which is annoying if you want a set size.
+
 ### 2.2.5 (2015-10-02)
 - Fix: Javascript binding issue.
 
