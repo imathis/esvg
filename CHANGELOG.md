@@ -1,6 +1,9 @@
 # Changelog
 
-### 2.2.5 (2015-10-05)
+### 2.3.1 (2015-10-15)
+- Minor: Added `svgo_path` config option to specifiy a direct path to the svgo binary.
+
+### 2.3.0 (2015-10-05)
 - New: Now using viewport size to write svg dimensions. Some editors export SVG as 100% width and height, which is annoying if you want a set size.
 
 ### 2.2.5 (2015-10-02)
