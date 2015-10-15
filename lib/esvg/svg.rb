@@ -9,6 +9,7 @@ module Esvg
       base_class: 'svg-icon',
       namespace: 'icon',
       optimize: false,
+      svgo_path: false,
       namespace_before: true,
       font_size: '1em',
       output_path: Dir.pwd,
@@ -23,6 +24,7 @@ module Esvg
     def initialize(options={})
       config(options)
       read_icons
+      @svgo = nil
       @cache = {}
     end
 
@@ -44,7 +46,15 @@ module Esvg
 
     def svgo?
       @svgo ||= begin
-         !(`npm ls -g svgo`.match(/empty/) && `npm ls svgo`.match(/emtpy/))
+        local_path = config[:svgo_path] || "#{Dir.pwd}/node_modules/svgo/bin/svgo"
+
+        if File.exist?(local_path)
+          local_path
+        elsif `npm ls -g svgo`.match(/empty/).nil?
+          "svgo"
+        else
+          false
+        end
       end
     end
 
@@ -76,8 +86,8 @@ module Esvg
 
     def read(file)
       if config[:optimize] && svgo?
-        # Compress files outputting to $STDOUT
-        `svgo #{file} -o -`
+        # Compress files outputting to $STDOUT which returns as a string
+        `#{@svgo} #{file} -o -`
       else
         File.read(file)
       end
