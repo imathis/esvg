@@ -9,7 +9,7 @@ module Esvg
       base_class: 'svg-icon',
       namespace: 'icon',
       optimize: false,
-      svgo_path: false,
+      npm_path: false,
       namespace_before: true,
       font_size: '1em',
       output_path: Dir.pwd,
@@ -23,17 +23,42 @@ module Esvg
 
     def initialize(options={})
       config(options)
-      read_icons
+
       @svgo = nil
-      @cache = {}
+      @svgs = {}
+
+      read_files
     end
 
-    def modified?
-      @mtime != last_modified(find_files)
+    def config(options={})
+      @config ||= begin
+        paths = [options[:config_file], 'config/esvg.yml', 'esvg.yml'].compact
+
+        config = CONFIG
+        config.merge!(CONFIG_RAILS) if Esvg.rails?
+
+        if path = paths.select{ |p| File.exist?(p)}.first
+          config.merge!(symbolize_keys(YAML.load(File.read(path) || {})))
+        end
+
+        config.merge!(options)
+
+        if config[:verbose]
+          config[:path] = File.expand_path(config[:path])
+          config[:output_path] = File.expand_path(config[:output_path])
+        end
+
+        config[:js_path]   ||= File.join(config[:output_path], 'esvg.js')
+        config[:css_path]  ||= File.join(config[:output_path], 'esvg.css')
+        config[:html_path] ||= File.join(config[:output_path], 'esvg.html')
+        config.delete(:output_path)
+
+        config
+      end
     end
 
     def embed
-      return if @files.empty?
+      return if files.empty?
       case config[:format]
       when "html"
         html
@@ -44,44 +69,48 @@ module Esvg
       end
     end
 
-    def svgo?
-      @svgo ||= begin
-        local_path = config[:svgo_path] || "#{Dir.pwd}/node_modules/svgo/bin/svgo"
+    def read_files
+      @files = {}
 
-        if File.exist?(local_path)
-          local_path
-        elsif `npm ls -g svgo`.match(/empty/).nil?
-          "svgo"
-        else
-          false
+      # Get a list of svg files and modification times
+      #
+      find_files.each do |f|
+        files[f] = File.mtime(f)
+      end
+
+      process_files
+
+      if files.empty? && config[:verbose]
+        puts "No svgs found at #{config[:path]}"
+      end
+    end
+
+    # Add new svgs, update modified svgs, remove deleted svgs
+    #
+    def process_files
+      files.each do |file, mtime|
+        name = file_key(file)
+
+        if svgs[name].nil? || svg[name][:last_modified] != mtime
+          svgs[name] = process_file(file, mtime, name)
         end
       end
-    end
 
-    def cache_name(input, options)
-      "#{input}#{options.flatten.join('-')}"
-    end
-
-    def read_icons
-      @files = {}
-      @svgs  = {}
-
-      found = find_files
-      @mtime = last_modified(found)
-
-      found.each do |f|
-        @files[dasherize(File.basename(f, ".*"))] = read(f)
-      end
-
-      if @files.empty? && config[:verbose]
-        puts "No icons found at #{config[:path]}"
+      # Remove deleted svgs
+      #
+      (svgs.keys - files.keys.map {|file| file_key(file) }).each do |file|
+        svgs.delete(file)
       end
     end
 
-    def last_modified(files)
-      if files.size > 0
-        File.mtime(files.sort_by{ |f| File.mtime(f) }.last)
-      end
+    def process_file(file, mtime, name)
+      content = read(file)
+      {
+        content: content,
+        symbol: symbolize_svg(name, content),
+        use: use_svg(name, content),
+        last_modified: mtime
+      }
     end
 
     def read(file)
@@ -93,14 +122,68 @@ module Esvg
       end
     end
 
-    # Optiize all svg source files
-    #
-    def optimize
-      if svgo?
-        puts "Optimzing #{config[:path]}"
-        system "svgo -f #{config[:path]}"
+    def use_svg(file, content)
+      name = classname(file)
+      %Q{<svg class="#{config[:base_class]} #{name}" #{dimensions(content)}><use xlink:href="##{name}"/></svg>}
+    end
+
+    def svg_icon(file, options={})
+      file = dasherize(file.to_s)
+      embed = @file[file][:embed]
+      embed = embed.sub(/class="(.+?)"/, 'class="\1 '+options[:class]+'"') if options[:class]
+      embed = embed.sub(/\/><\/svg/, "/>#{title(options)}#{desc(options)}</svg>")
+      embed
+    end
+
+    def dimensions(input)
+      dimension = input.scan(/<svg.+(viewBox=["'](.+?)["'])/).flatten
+      viewbox = dimension.first
+      coords = dimension.last.split(' ')
+
+      width = coords[2].to_i - coords[0].to_i
+      height = coords[3].to_i - coords[1].to_i
+      %Q{#{viewbox} width="#{width}" height="#{height}"}
+    end
+
+    def icon_name(name)
+      if @files[name].nil?
+        raise "No svg named '#{name}' exists at #{config[:path]}"
+      end
+      classname(name)
+    end
+
+    def classname(name)
+      name = dasherize(name)
+      if config[:namespace_before]
+        "#{config[:namespace]}-#{name}"
       else
-        abort 'To optimize files, please install svgo; `npm install svgo -g`'
+        "#{name}-#{config[:namespace]}"
+      end
+    end
+
+    def dasherize(input)
+      input.gsub(/[\W,_]/, '-').gsub(/-{2,}/, '-')
+    end
+
+    def find_files
+      path = File.expand_path(File.join(config[:path], '*.svg'))
+      Dir[path].uniq
+    end
+
+
+    def title(options)
+      if options[:title]
+        "<title>#{options[:title]}</title>"
+      else
+        ''
+      end
+    end
+
+    def desc(options)
+      if options[:desc]
+        "<desc>#{options[:desc]}</desc>"
+      else
+        ''
       end
     end
 
@@ -116,13 +199,6 @@ module Esvg
       end
     end
 
-    def write_file(path, contents)
-      FileUtils.mkdir_p(File.expand_path(File.dirname(path)))
-      File.open(path, 'w') do |io|
-        io.write(contents)
-      end
-    end
-
     def write_js
       write_file config[:js_path], js
     end
@@ -135,12 +211,18 @@ module Esvg
       write_file config[:html_path], html
     end 
 
+    def write_file(path, contents)
+      FileUtils.mkdir_p(File.expand_path(File.dirname(path)))
+      File.open(path, 'w') do |io|
+        io.write(contents)
+      end
+    end
+
     def css
-      @cache['css'] ||= begin
-        styles = []
-        
-        classes = files.keys.map{|k| ".#{icon_name(k)}"}.join(', ')
-        preamble = %Q{#{classes} { 
+      styles = []
+      
+      classes = svgs.keys.map{|k| ".#{classname(k)}"}.join(', ')
+      preamble = %Q{#{classes} { 
   font-size: #{config[:font_size]};
   clip: auto;
   background-size: auto;
@@ -156,43 +238,45 @@ module Esvg
   vertical-align: middle;
   line-height: 1em;
 }}
-        styles << preamble
+      styles << preamble
 
-        files.each do |name, contents|
-          f = contents.gsub(/</, '%3C') # escape <
-                      .gsub(/>/, '%3E') # escape >
-                      .gsub(/#/, '%23') # escape #
-                      .gsub(/\n/,'')    # remove newlines
-          styles << ".#{icon_name(name)} { background-image: url('data:image/svg+xml;utf-8,#{f}'); }"
+      svgs.each do |name, data|
+        if data[:css]
+          styles << css
+        else
+          svg_css = data[:content].gsub(/</, '%3C') # escape <
+                                  .gsub(/>/, '%3E') # escape >
+                                  .gsub(/#/, '%23') # escape #
+                                  .gsub(/\n/,'')    # remove newlines
+          styles << data[:css] = ".#{classname(name)} { background-image: url('data:image/svg+xml;utf-8,#{svg_css}'); }"
         end
-        styles.join("\n")
       end
+      styles.join("\n")
+    end
+
+    def symbolize_svg(file, content)
+      content.gsub(/<svg.+?>/, %Q{<symbol id="#{classname(file)}" #{dimensions(content)}>})  # convert svg to symbols
+             .gsub(/<\/svg/, '</symbol')     # convert svg to symbols
+             .gsub(/style=['"].+?['"]/, '')  # remove inline styles
+             .gsub(/\n/, '')                 # remove endlines
+             .gsub(/\s{2,}/, ' ')            # remove whitespace
+             .gsub(/>\s+</, '><')            # remove whitespace between tags
     end
 
     def html
-      @cache['html'] ||= begin
-        if @files.empty?
-          ''
-        else
-          files.each do |name, contents|
-            @svgs[name] = contents.gsub(/<svg.+?>/, %Q{<symbol id="#{icon_name(name)}" #{dimensions(contents)}>})  # convert svg to symbols
-                           .gsub(/<\/svg/, '</symbol')     # convert svg to symbols
-                           .gsub(/style=['"].+?['"]/, '')  # remove inline styles
-                           .gsub(/\n/, '')                 # remove endlines
-                           .gsub(/\s{2,}/, ' ')            # remove whitespace
-                           .gsub(/>\s+</, '><')            # remove whitespace between tags
-          end
-
-          icons = @svgs
-
-          %Q{<svg id="esvg-symbols" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none">#{icons.values.join("\n")}</svg>}
+      if @files.empty?
+        ''
+      else
+        symbols = []
+        svgs.each do |name, data|
+          symbols << data[:symbol]
         end
+        %Q{<svg id="esvg-symbols" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none">#{symbols.join("\n")}</svg>}
       end
     end
 
     def js
-      @cache['js'] ||= begin
-        %Q{var esvg = {
+      %Q{var esvg = {
   embed: function(){
     if (!document.querySelector('#esvg-symbols')) {
       document.querySelector('body').insertAdjacentHTML('afterbegin', '#{html.gsub(/\n/,'').gsub("'"){"\\'"}}')
@@ -239,95 +323,36 @@ esvg.load()
 // Work with module exports:
 if(typeof(module) != 'undefined') { module.exports = esvg }
 }
-      end
     end
 
-    def svg_icon(file, options={})
-      file = dasherize(file.to_s)
-      @cache[cache_name(file, options)] ||= begin 
-        name = icon_name(file)
-        %Q{<svg class="#{config[:base_class]} #{name} #{options[:class] || ""}" #{dimensions(@files[file])}><use xlink:href="##{name}"/>#{title(options)}#{desc(options)}</svg>}
-      end
-    end
+    def svgo?
+      @svgo ||= begin
+        npm_path   = config[:npm_path] || "#{Dir.pwd}/node_modules"
+        local_path = File.join(npm_path, "svgo/bin/svgo")
 
-    def title(options)
-      if options[:title]
-        "<title>#{options[:title]}</title>"
-      end
-    end
-
-    def desc(options)
-      if options[:desc]
-        "<desc>#{options[:desc]}</desc>"
-      end
-    end
-
-    def config(options={})
-      @config ||= begin
-        paths = [options[:config_file], 'config/esvg.yml', 'esvg.yml'].compact
-
-        config = CONFIG
-        config.merge!(CONFIG_RAILS) if Esvg.rails?
-
-        if path = paths.select{ |p| File.exist?(p)}.first
-          config.merge!(symbolize_keys(YAML.load(File.read(path) || {})))
+        if config[:npm_path] && !File.exist?(npm_path)
+          abort "NPM Path not found: #{File.expand_path(config[:npm_path])}"
         end
 
-        config.merge!(options)
-
-        if config[:verbose]
-          config[:path] = File.expand_path(config[:path])
-          config[:output_path] = File.expand_path(config[:output_path])
+        if File.exist?(local_path)
+          local_path
+        elsif `npm ls -g svgo`.match(/empty/).nil?
+          "svgo"
+        else
+          false
         end
-
-        config[:js_path]   ||= File.join(config[:output_path], 'esvg.js')
-        config[:css_path]  ||= File.join(config[:output_path], 'esvg.css')
-        config[:html_path] ||= File.join(config[:output_path], 'esvg.html')
-        config.delete(:output_path)
-
-        config
       end
     end
+
+    def file_key(name)
+      dasherize(File.basename(name, ".*"))
+    end
+
 
     def symbolize_keys(hash)
       h = {}
       hash.each {|k,v| h[k.to_sym] = v }
       h
-    end
-
-    def dimensions(input)
-      dimension = input.scan(/<svg.+(viewBox=["'](.+?)["'])/).flatten
-      viewbox = dimension.first
-      coords = dimension.last.split(' ')
-
-      width = coords[2].to_i - coords[0].to_i
-      height = coords[3].to_i - coords[1].to_i
-      %Q{#{viewbox} width="#{width}" height="#{height}"}
-    end
-
-    def icon_name(name)
-      if @files[name].nil?
-        raise "No icon named '#{name}' exists at #{config[:path]}"
-      end
-      classname(name)
-    end
-
-    def classname(name)
-      name = dasherize(name)
-      if config[:namespace_before]
-        "#{config[:namespace]}-#{name}"
-      else
-        "#{name}-#{config[:namespace]}"
-      end
-    end
-
-    def dasherize(input)
-      input.gsub(/[\W,_]/, '-').gsub(/-{2,}/, '-')
-    end
-
-    def find_files
-      path = File.expand_path(File.join(config[:path], '*.svg'))
-      Dir[path].uniq
     end
 
   end
