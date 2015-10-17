@@ -15,7 +15,7 @@ module Esvg
     if @icons.nil?
       @icons = SVG.new(options)
     elsif !rails? || (rails? && ::Rails.env.downcase != 'production')
-      @icons.read_icons
+      @icons.read_files
     end
 
     @icons

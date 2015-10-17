@@ -91,7 +91,7 @@ module Esvg
       files.each do |file, mtime|
         name = file_key(file)
 
-        if svgs[name].nil? || svg[name][:last_modified] != mtime
+        if svgs[name].nil? || svgs[name][:last_modified] != mtime
           svgs[name] = process_file(file, mtime, name)
         end
       end
@@ -104,23 +104,22 @@ module Esvg
     end
 
     def process_file(file, mtime, name)
-      content = read(file)
+      content = File.read(file).gsub(/<?.+\?>/,'').gsub(/<!.+?>/,'')
       {
         content: content,
-        symbol: symbolize_svg(name, content),
         use: use_svg(name, content),
         last_modified: mtime
       }
     end
 
-    def read(file)
-      if config[:optimize] && svgo?
-        # Compress files outputting to $STDOUT which returns as a string
-        `#{@svgo} #{file} -o -`
-      else
-        File.read(file)
-      end
-    end
+    #def compress(file)
+      #if config[:optimize] && svgo?
+         #Compress files outputting to $STDOUT which returns as a string
+        #`#{@svgo} #{file} -o -`
+      #else
+        #File.read(file)
+      #end
+    #end
 
     def use_svg(file, content)
       name = classname(file)
@@ -254,10 +253,8 @@ module Esvg
       styles.join("\n")
     end
 
-    def symbolize_svg(file, content)
-      content.gsub(/<svg.+?>/, %Q{<symbol id="#{classname(file)}" #{dimensions(content)}>})  # convert svg to symbols
-             .gsub(/<\/svg/, '</symbol')     # convert svg to symbols
-             .gsub(/style=['"].+?['"]/, '')  # remove inline styles
+    def prep_svg(file, content)
+      content.gsub(/<svg.+?>/, %Q{<svg class="#{classname(file)}" #{dimensions(content)}>})  # convert svg to symbols
              .gsub(/\n/, '')                 # remove endlines
              .gsub(/\s{2,}/, ' ')            # remove whitespace
              .gsub(/>\s+</, '><')            # remove whitespace between tags
@@ -269,9 +266,18 @@ module Esvg
       else
         symbols = []
         svgs.each do |name, data|
-          symbols << data[:symbol]
+          symbols << prep_svg(name, data[:content])
         end
-        %Q{<svg id="esvg-symbols" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none">#{symbols.join("\n")}</svg>}
+
+        symbols = if config[:optimize] && svgo?
+          `svgo -s '#{symbols.join}' -o -`
+        else
+          symbols.join
+        end
+
+        symbols = symbols.gsub(/class/,'id').gsub(/svg/,'symbol')
+
+        %Q{<svg id="esvg-symbols" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none">#{symbols}</svg>}
       end
     end
 
@@ -327,7 +333,7 @@ if(typeof(module) != 'undefined') { module.exports = esvg }
 
     def svgo?
       @svgo ||= begin
-        npm_path   = config[:npm_path] || "#{Dir.pwd}/node_modules"
+        npm_path   = "#{config[:npm_path] || Dir.pwd}/node_modules"
         local_path = File.join(npm_path, "svgo/bin/svgo")
 
         if config[:npm_path] && !File.exist?(npm_path)

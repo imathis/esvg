@@ -12,7 +12,7 @@
   compare: expected/standard/esvg.html build/esvg.html
 - 
   title: "Test SVGO JS"
-  before: esvg svg_icons -o build -c _svgo.yml
+  before: esvg svg_icons -o build -O
   compare: expected/svgo/esvg.js build/esvg.js
 - 
   title: "Test Mass SVGO"

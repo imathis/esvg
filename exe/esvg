@@ -19,6 +19,14 @@ OptionParser.new do |opts|
   opts.on("-c", "--config PATH", String, "Path to a config file (default: esvg.yml, config/esvg.yml)") do |path|
     options[:config_file] = path
   end
+
+  opts.on("-O", "--optimize", "Optimize svgs with svgo") do |svgo|
+    options[:optimize] = svgo
+  end
+
+  opts.on("-n", "--npm", String, "Path to node_modules director") do |path|
+    options[:npm_path] = path
+  end
 end.parse!
 
 options[:path] = ARGV.shift
