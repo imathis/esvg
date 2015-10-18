@@ -1,5 +1,10 @@
 # Changelog
 
+### 2.4.0 (2015-10-17)
+- New: Caching is now based on file modification times. It's much faster and more efficient.
+- New: Optimization is much faster now too, as it happens after symbol concatenation, so it only runs once per build.
+- Change: Configuration `svgo_path` is now `npm_path` and points to the path where the `node_modules` folder can be found.
+
 ### 2.3.1 (2015-10-15)
 - Minor: Added `svgo_path` config option to specifiy a direct path to the svgo binary.
 
