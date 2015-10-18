@@ -127,8 +127,7 @@ module Esvg
     end
 
     def svg_icon(file, options={})
-      file = icon_name(file.to_s)
-      embed = svgs[file][:use]
+      embed = use_icon(file)
       embed = embed.sub(/class="(.+?)"/, 'class="\1 '+options[:class]+'"') if options[:class]
       embed = embed.sub(/><\/svg/, ">#{title(options)}#{desc(options)}</svg")
       embed
@@ -144,11 +143,12 @@ module Esvg
       %Q{#{viewbox} width="#{width}" height="#{height}"}
     end
 
-    def icon_name(name)
+    def use_icon(name)
       if svgs[name].nil?
         raise "No svg named '#{name}' exists at #{config[:path]}"
+      else
+        svgs[name][:use]
       end
-      classname(name)
     end
 
     def classname(name)

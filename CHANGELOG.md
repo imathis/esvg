@@ -1,5 +1,8 @@
 # Changelog
 
+### 2.4.1 (2015-10-17)
+- Fix: Icon embedding (with ruby/rails) uses proper key for lookup.
+
 ### 2.4.0 (2015-10-17)
 - New: Caching is now based on file modification times. It's much faster and more efficient.
 - New: Optimization is much faster now too, as it happens after symbol concatenation, so it only runs once per build.
