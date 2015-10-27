@@ -264,7 +264,7 @@ module Esvg
     def optimize(svg)
       if config[:optimize] && svgo?
         path = write_svg(svg)
-        svg = `svgo '#{path}' -o -`
+        svg = `#{@svgo} '#{path}' -o -`
         FileUtils.rm(path)
       end
 
