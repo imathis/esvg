@@ -1,6 +1,6 @@
 # Changelog
 
-### 2.4.2 (2015-10-27)
+### 2.4.3 (2015-10-27)
 - Fix: Use proper svgo command when svgo is available.
 
 ### 2.4.2 (2015-10-26)
