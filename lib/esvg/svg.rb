@@ -112,15 +112,6 @@ module Esvg
       }
     end
 
-    #def compress(file)
-      #if config[:optimize] && svgo?
-         #Compress files outputting to $STDOUT which returns as a string
-        #`#{@svgo} #{file} -o -`
-      #else
-        #File.read(file)
-      #end
-    #end
-
     def use_svg(file, content)
       name = classname(file)
       %Q{<svg class="#{config[:base_class]} #{name}" #{dimensions(content)}><use xlink:href="##{name}"/></svg>}
@@ -198,6 +189,12 @@ module Esvg
       end
     end
 
+    def write_svg(svg)
+      path = File.join(config[:path], '.esvg-cache')
+      write_file path, svg
+      path
+    end
+
     def write_js
       write_file config[:js_path], js
     end
@@ -254,10 +251,24 @@ module Esvg
     end
 
     def prep_svg(file, content)
-      content.gsub(/<svg.+?>/, %Q{<svg class="#{classname(file)}" #{dimensions(content)}>})  # convert svg to symbols
-             .gsub(/\n/, '')                 # remove endlines
-             .gsub(/\s{2,}/, ' ')            # remove whitespace
-             .gsub(/>\s+</, '><')            # remove whitespace between tags
+      content = content.gsub(/<svg.+?>/, %Q{<svg class="#{classname(file)}" #{dimensions(content)}>})  # convert svg to symbols
+             .gsub(/\n/, '')                 # Remove endlines
+             .gsub(/\s{2,}/, ' ')            # Remove whitespace
+             .gsub(/>\s+</, '><')            # Remove whitespace between tags
+             .gsub(/style="([^"]*?)fill:(.+?);/m, 'fill="\2" style="\1')                   # Make fill a property instead of a style
+             .gsub(/style="([^"]*?)fill-opacity:(.+?);/m, 'fill-opacity="\2" style="\1')   # Move fill-opacity a property instead of a style
+             .gsub(/\s?style=".*?";?/,'')    # Strip style property
+             .gsub(/\s?fill="(#0{3,6}|black|rgba?\(0,0,0\))"/,'')      # Strip black fill
+    end
+
+    def optimize(svg)
+      if config[:optimize] && svgo?
+        path = write_svg(svg)
+        svg = `svgo '#{path}' -o -`
+        FileUtils.rm(path)
+      end
+
+      svg
     end
 
     def html
@@ -269,13 +280,7 @@ module Esvg
           symbols << prep_svg(name, data[:content])
         end
 
-        symbols = if config[:optimize] && svgo?
-          `svgo -s '#{symbols.join}' -o -`
-        else
-          symbols.join
-        end
-
-        symbols = symbols.gsub(/class/,'id').gsub(/svg/,'symbol')
+        symbols = optimize(symbols.join).gsub(/class/,'id').gsub(/svg/,'symbol')
 
         %Q{<svg id="esvg-symbols" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none">#{symbols}</svg>}
       end

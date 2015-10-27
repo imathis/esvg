@@ -1,7 +1,10 @@
 # Changelog
 
+### 2.4.2 (2015-10-26)
+- Fix: Improved reliability and speed of optimization with svgo, by writing a temp file to the file system.
+
 ### 2.4.1 (2015-10-17)
-- Fix: Icon embedding (with ruby/rails) uses proper key for lookup.
+- Fix: icon embedding (with ruby/rails) uses proper key for lookup.
 
 ### 2.4.0 (2015-10-17)
 - New: Caching is now based on file modification times. It's much faster and more efficient.
