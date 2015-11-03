@@ -1,5 +1,9 @@
 # Changelog
 
+### 2.5.0 (2015-11-03)
+- Improved logging
+- Added `--version` flag for CLI
+
 ### 2.4.3 (2015-10-27)
 - Fix: Use proper svgo command when svgo is available.
 

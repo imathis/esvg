@@ -27,8 +27,17 @@ OptionParser.new do |opts|
   opts.on("-n", "--npm", String, "Path to node_modules director") do |path|
     options[:npm_path] = path
   end
+
+  opts.on("-l", "--log", "Print version") do |version|
+    options[:version] = true
+  end
+
 end.parse!
 
-options[:path] = ARGV.shift
-
-esvg = Esvg::SVG.new(options).write
+if options[:version]
+  puts "Esvg #{Esvg::VERSION}"
+else
+  options[:path] = ARGV.shift
+  options[:cli] = true
+  esvg = Esvg::SVG.new(options).write
+end

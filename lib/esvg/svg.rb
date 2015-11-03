@@ -43,7 +43,7 @@ module Esvg
 
         config.merge!(options)
 
-        if config[:verbose]
+        if config[:cli]
           config[:path] = File.expand_path(config[:path])
           config[:output_path] = File.expand_path(config[:output_path])
         end
@@ -78,9 +78,11 @@ module Esvg
         files[f] = File.mtime(f)
       end
 
+      puts "Read #{files.size} files from #{log_path svg_path}" if config[:cli]
+
       process_files
 
-      if files.empty? && config[:verbose]
+      if files.empty? && config[:cli]
         puts "No svgs found at #{config[:path]}"
       end
     end
@@ -155,8 +157,12 @@ module Esvg
       input.gsub(/[\W,_]/, '-').gsub(/-{2,}/, '-')
     end
 
+    def svg_path
+      File.expand_path(File.join(config[:path]))
+    end
+
     def find_files
-      path = File.expand_path(File.join(config[:path], '*.svg'))
+      path = File.join(svg_path, '*.svg')
       Dir[path].uniq
     end
 
@@ -182,11 +188,18 @@ module Esvg
       case config[:format]
       when "html"
         write_html
+        puts "Written to #{log_path config[:html_path]}" if config[:cli]
       when "js"
         write_js
+        puts "Written to #{log_path config[:js_path]}" if config[:cli]
       when "css"
         write_css
+        puts "Written to #{log_path config[:css_path]}" if config[:cli]
       end
+    end
+
+    def log_path(path)
+      path.sub(File.expand_path(Dir.pwd), '').sub(/^\//,'')
     end
 
     def write_svg(svg)
