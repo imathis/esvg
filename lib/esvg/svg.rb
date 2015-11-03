@@ -78,7 +78,7 @@ module Esvg
         files[f] = File.mtime(f)
       end
 
-      puts "Read #{files.size} files from #{log_path svg_path}" if config[:cli]
+      puts "Read #{files.size} files from #{config[:path]}" if config[:cli]
 
       process_files
 
@@ -157,12 +157,8 @@ module Esvg
       input.gsub(/[\W,_]/, '-').gsub(/-{2,}/, '-')
     end
 
-    def svg_path
-      File.expand_path(File.join(config[:path]))
-    end
-
     def find_files
-      path = File.join(svg_path, '*.svg')
+      path = File.expand_path(File.join(config[:path], '*.svg'))
       Dir[path].uniq
     end
 
@@ -199,7 +195,7 @@ module Esvg
     end
 
     def log_path(path)
-      path.sub(File.expand_path(Dir.pwd), '').sub(/^\//,'')
+      File.expand_path(path).sub(File.expand_path(Dir.pwd), '').sub(/^\//,'')
     end
 
     def write_svg(svg)
@@ -313,7 +309,7 @@ module Esvg
     if (element) {
       return '<svg class="#{config[:base_class]} '+svgName+' '+(classnames || '')+'" '+this.dimensions(element)+'><use xlink:href="#'+svgName+'"/></svg>'
     } else {
-      console.error('File not found: "'+name+'.svg" at #{File.join(config[:path],'')}')
+      console.error('File not found: "'+name+'.svg" at #{log_path(File.join(config[:path],''))}/')
     }
   },
   iconName: function(name) {
