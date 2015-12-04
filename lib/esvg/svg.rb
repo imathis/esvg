@@ -14,7 +14,8 @@ module Esvg
       font_size: '1em',
       output_path: Dir.pwd,
       verbose: false,
-      format: 'js'
+      format: 'js',
+      alias: {}
     }
 
     CONFIG_RAILS = {
@@ -52,9 +53,24 @@ module Esvg
         config[:css_path]  ||= File.join(config[:output_path], 'esvg.css')
         config[:html_path] ||= File.join(config[:output_path], 'esvg.html')
         config.delete(:output_path)
+        config[:aliases] = load_aliases(config[:alias])
 
         config
       end
+    end
+
+    def load_aliases(aliases)
+      a = {}
+      aliases.each do |k,v|
+        v.split(',').each do |val|
+          a[dasherize(val.strip)] = dasherize(k.to_s)
+        end
+      end
+      a
+    end
+
+    def get_alias(name)
+      config[:aliases][dasherize(name)] || name
     end
 
     def embed
@@ -115,7 +131,7 @@ module Esvg
     end
 
     def use_svg(file, content)
-      name = classname(file)
+      name = classname(get_alias(file))
       %Q{<svg class="#{config[:base_class]} #{name}" #{dimensions(content)}><use xlink:href="##{name}"/></svg>}
     end
 
@@ -137,7 +153,7 @@ module Esvg
     end
 
     def use_icon(name)
-      if svgs[name].nil?
+      if svgs[get_alias(name)].nil?
         raise "No svg named '#{name}' exists at #{config[:path]}"
       else
         svgs[name][:use]
