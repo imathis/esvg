@@ -1,6 +1,6 @@
 - 
   title: "Test JS"
-  before: esvg svg_icons -o build
+  before: esvg svg_icons -o build --config _alias.yml
   compare: expected/standard/esvg.js build/esvg.js
 - 
   title: "Test CSS"

@@ -37,6 +37,15 @@ var esvg = {
 
     // Handle standard DOM ready events
     document.addEventListener("DOMContentLoaded", function(event) { this.embed() }.bind(this))
+  },
+  aliases: {"comment-bubble":"comment","chat-bubble":"comment","chat":"comment"},
+  alias: function(name) {
+    var aliased = this.aliases[name]
+    if (typeof(aliased) != "undefined") {
+      return aliased
+    } else {
+      return name
+    }
   }
 }
 

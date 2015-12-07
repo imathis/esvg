@@ -1,4 +1,5 @@
 require 'yaml'
+require 'json'
 
 module Esvg
   class SVG
@@ -59,18 +60,27 @@ module Esvg
       end
     end
 
+    # Load aliases from configuration.
+    #  returns a hash of aliasees mapped to a name.
+    #  Converts configuration YAML:
+    #    alias:
+    #      foo: bar
+    #      baz: zip, zop
+    #  To output:
+    #    { :bar => "foo", :zip => "baz", :zop => "baz" }
+    #
     def load_aliases(aliases)
       a = {}
-      aliases.each do |k,v|
-        v.split(',').each do |val|
-          a[dasherize(val.strip)] = dasherize(k.to_s)
+      aliases.each do |name,alternates|
+        alternates.split(',').each do |val|
+          a[dasherize(val.strip).to_sym] = dasherize(name.to_s)
         end
       end
       a
     end
 
     def get_alias(name)
-      config[:aliases][dasherize(name)] || name
+      config[:aliases][dasherize(name).to_sym] || name
     end
 
     def embed
@@ -351,6 +361,15 @@ module Esvg
 
     // Handle standard DOM ready events
     document.addEventListener("DOMContentLoaded", function(event) { this.embed() }.bind(this))
+  },
+  aliases: #{config[:aliases].to_json},
+  alias: function(name) {
+    var aliased = this.aliases[name]
+    if (typeof(aliased) != "undefined") {
+      return aliased
+    } else {
+      return name
+    }
   }
 }
 
