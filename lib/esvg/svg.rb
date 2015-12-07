@@ -163,7 +163,8 @@ module Esvg
     end
 
     def use_icon(name)
-      if svgs[get_alias(name)].nil?
+      name = get_alias(name)
+      if svgs[name].nil?
         raise "No svg named '#{name}' exists at #{config[:path]}"
       else
         svgs[name][:use]

@@ -1,5 +1,8 @@
 # Changelog
 
+### 2.6.0 (2015-12-07)
+- New - Alias mapping so several different names can be used to reference icons
+
 ### 2.5.0 (2015-11-03)
 - Improved logging
 - Added `--version` flag for CLI
