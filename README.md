@@ -102,6 +102,10 @@ base_class: svg-icon        # Select all icons with this base classname
 namespace: icon             # Namespace for symbol ids or CSS classnames
 namespace_before: true      # Add namespace before, e.g. icon-kitten
 
+alias:                      # Add aliases for icon names
+  comment: chat             # use "chat" to reference comment.svg
+  error: bad, broken        # Use "bad" or "broken" to reference error.svg
+
 font_size: 1em              # Default size for SVGs (if embeded in stylesheets)
 ```
 
