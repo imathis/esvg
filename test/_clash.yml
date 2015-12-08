@@ -11,17 +11,6 @@
   before: esvg svg_icons -f html -o build
   compare: expected/standard/esvg.html build/esvg.html
 - 
-  title: "Test SVGO JS"
-  before: esvg svg_icons -o build -O
-  compare: expected/svgo/esvg.js build/esvg.js
-- 
   title: "Test USE icon with alias"
   before: ruby use_icon.rb
   compare: expected/use_icon.html build/use_icon.html
-- 
-  title: "Test Mass SVGO"
-  before:
-    - rm -rf optimized
-    - cp -r svg_icons optimized
-    - svgo optimized
-  compare: expected/svgo/comments.svg optimized/comments.svg
