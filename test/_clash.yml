@@ -14,4 +14,7 @@
   title: "Test USE icon with alias"
   before: ruby use_icon.rb
   compare: expected/use.html build/use.html
-  trace: true
+- 
+  title: "Test SVGO JS"
+  before: esvg svg_icons -o build -O
+  compare: expected/svgo/esvg.js build/esvg.js
