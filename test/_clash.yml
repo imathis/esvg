@@ -13,4 +13,5 @@
 - 
   title: "Test USE icon with alias"
   before: ruby use_icon.rb
-  compare: expected/use_icon.html build/use_icon.html
+  compare: expected/use.html build/use.html
+  trace: true
