@@ -148,6 +148,13 @@ module Esvg
     def svg_icon(file, options={})
       embed = use_icon(file)
       embed = embed.sub(/class="(.+?)"/, 'class="\1 '+options[:class]+'"') if options[:class]
+      if options[:style]
+        if embed.match(/style/)
+          embed = embed.sub(/style="(.+?)"/, 'style="\1; '+options[:style]+'"')
+        else
+          embed = embed.sub(/><use/, %Q{ style="#{options[:style]}"><use})
+        end
+      end
       embed = embed.sub(/><\/svg/, ">#{title(options)}#{desc(options)}</svg")
       embed
     end

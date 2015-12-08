@@ -1,7 +1,10 @@
 # Changelog
 
+### 2.7.0 (2015-12-08)
+- New: Now option style can append to inlines styles
+
 ### 2.6.0 (2015-12-07)
-- New - Alias mapping so several different names can be used to reference icons
+- New: Alias mapping so several different names can be used to reference icons
 
 ### 2.5.0 (2015-11-03)
 - Improved logging
