@@ -1,8 +1,5 @@
 language: ruby
 rvm:
   - 2.1.2
-node_js:
-  - "0.12"
 before_install: gem install bundler -v 1.10.3
-before_script: npm install svgo -g
-script: bundle exec clash
+script: bundle exec clash 1-4
