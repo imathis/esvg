@@ -1,5 +1,8 @@
 # Changelog
 
+### 2.8.1 (2015-12-16)
+- Fix: Repeat icons no longer retain previous icon's options.
+
 ### 2.8.0 (2015-12-16)
 - New: Added exist? method to ask if an icon exists.
 - New: `fallback` option allows svgs to provide a fallback icon if one is not found.

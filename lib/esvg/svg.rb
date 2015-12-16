@@ -156,14 +156,13 @@ module Esvg
       else
 
         embed = use_icon(file)
-
-        embed.sub!(/class="(.+?)"/, 'class="\1 '+options[:class]+'"') if options[:class]
+        embed = embed.sub(/class="(.+?)"/, 'class="\1 '+options[:class]+'"') if options[:class]
 
         if options[:style]
           if embed.match(/style/)
-            embed.sub!(/style="(.+?)"/, 'style="\1; '+options[:style]+'"')
+            embed = embed.sub(/style="(.+?)"/, 'style="\1; '+options[:style]+'"')
           else
-            embed.sub!(/><use/, %Q{ style="#{options[:style]}"><use})
+            embed = embed.sub(/><use/, %Q{ style="#{options[:style]}"><use})
           end
         end
 

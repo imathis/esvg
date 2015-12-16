@@ -65,6 +65,12 @@ To place an SVG icon, use the `svg_icon` helper. This helper will embed an SVG `
 # Output: 
 # <svg class="icon kitten-icon adorbs"><use xlink:href="#kitten-icon"/></svg>
 
+# Provide fallback icon if an icon is missing
+<%= svg_icon 'missing', fallback: 'kitten' %>
+
+# Output: 
+# <svg class="icon kitten-icon"><use xlink:href="#kitten-icon"/></svg>
+
 # Add custom styles
 <%= svg_icon 'kitten', style: 'color: #c0ffee' %>
 
