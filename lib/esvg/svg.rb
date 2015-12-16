@@ -146,17 +146,29 @@ module Esvg
     end
 
     def svg_icon(file, options={})
-      embed = use_icon(file)
-      embed = embed.sub(/class="(.+?)"/, 'class="\1 '+options[:class]+'"') if options[:class]
-      if options[:style]
-        if embed.match(/style/)
-          embed = embed.sub(/style="(.+?)"/, 'style="\1; '+options[:style]+'"')
+
+      if !exist?(file)
+        if fallback = options.delete(:fallback)
+          svg_icon(fallback, options)
         else
-          embed = embed.sub(/><use/, %Q{ style="#{options[:style]}"><use})
+          raise "no svg named '#{get_alias(file)}' exists at #{config[:path]}"
         end
+      else
+
+        embed = use_icon(file)
+
+        embed.sub!(/class="(.+?)"/, 'class="\1 '+options[:class]+'"') if options[:class]
+
+        if options[:style]
+          if embed.match(/style/)
+            embed.sub!(/style="(.+?)"/, 'style="\1; '+options[:style]+'"')
+          else
+            embed.sub!(/><use/, %Q{ style="#{options[:style]}"><use})
+          end
+        end
+
+        embed.sub(/><\/svg/, ">#{title(options)}#{desc(options)}</svg")
       end
-      embed = embed.sub(/><\/svg/, ">#{title(options)}#{desc(options)}</svg")
-      embed
     end
 
     def dimensions(input)
@@ -171,12 +183,15 @@ module Esvg
 
     def use_icon(name)
       name = get_alias(name)
-      if svgs[name].nil?
-        raise "No svg named '#{name}' exists at #{config[:path]}"
-      else
-        svgs[name][:use]
-      end
+      svgs[name][:use]
     end
+
+    def exist?(name)
+      name = get_alias(name)
+      !svgs[name].nil?
+    end
+
+    alias_method :exists?, :exist?
 
     def classname(name)
       name = dasherize(name)

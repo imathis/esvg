@@ -29,6 +29,10 @@ module Esvg
     @icons.svg_icon(name, options)
   end
 
+  def exist?(name)
+    @icons.exist?(name)
+  end
+
   def rails?
     defined?(Rails)
   end

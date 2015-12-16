@@ -1,5 +1,9 @@
 # Changelog
 
+### 2.8.0 (2015-12-16)
+- New: Added exist? method to ask if an icon exists.
+- New: `fallback` option allows svgs to provide a fallback icon if one is not found.
+
 ### 2.7.0 (2015-12-08)
 - New: Now option style can append to inlines styles
 

@@ -3,6 +3,7 @@ require 'fileutils'
 
 Esvg.icons({config_file: '_alias.yml', path: 'svg_icons'})
 use = Esvg.svg_icon('chat-bubble')
+fallback = Esvg.svg_icon('boo', fallback: 'chat-bubble')
 use_style = Esvg.svg_icon('chat-bubble', style: 'display: none')
 
 def write_file(path, contents)
@@ -15,4 +16,5 @@ def write_file(path, contents)
 end
 
 write_file('build/use/icon.html', use)
+write_file('build/use/fallback.html', fallback)
 write_file('build/use/style.html', use_style)
