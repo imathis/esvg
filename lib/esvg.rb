@@ -12,9 +12,9 @@ module Esvg
   extend self
 
   def icons(options={})
-    if @icons.nil?
-      @icons = SVG.new(options)
-    elsif !rails? || (rails? && ::Rails.env.downcase != 'production')
+    @icons ||= SVG.new(options)
+
+    if !rails? || Rails.env.development?
       @icons.read_files
     end
 
