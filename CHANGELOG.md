@@ -1,5 +1,10 @@
 # Changelog
 
+### 2.8.3 (2016-01-04)
+- Fix: file read throttling
+- Fix: Caching for Rails helper
+- Improved tests covering dash vs. underscore usage
+
 ### 2.8.2 (2016-01-03)
 - Fix: Rails helpers work better out of the box and hit the file system only when necessary.
 
