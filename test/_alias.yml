@@ -1,2 +1,2 @@
 alias:
-  comments: comment-bubble, chat-bubble, chat, comment
+  comment_bubble: chat-bubble, chat, comment, comments

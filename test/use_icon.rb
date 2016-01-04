@@ -1,10 +1,10 @@
 require 'esvg'
 require 'fileutils'
 
-Esvg.icons({config_file: '_alias.yml', path: 'svg_icons'})
-use = Esvg.svg_icon('chat-bubble')
-fallback = Esvg.svg_icon('boo', fallback: 'chat-bubble')
-use_style = Esvg.svg_icon('chat-bubble', style: 'display: none')
+svgs = Esvg.new({config_file: '_alias.yml', path: 'svg_icons'})
+use = svgs.svg_icon('chat_bubble')
+fallback = svgs.svg_icon('boo', fallback: 'chat-bubble')
+use_style = svgs.svg_icon('chat-bubble', style: 'display: none')
 
 def write_file(path, contents)
   path = File.expand_path(path)

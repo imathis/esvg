@@ -1,6 +1,6 @@
 # Changelog
 
-### 2.8.1 (2015-01-03)
+### 2.8.2 (2016-01-03)
 - Fix: Rails helpers work better out of the box and hit the file system only when necessary.
 
 ### 2.8.1 (2015-12-16)

@@ -3,7 +3,7 @@ require 'json'
 
 module Esvg
   class SVG
-    attr_accessor :files, :svgs
+    attr_accessor :files, :svgs, :last_read
 
     CONFIG = {
       path: Dir.pwd,
@@ -16,6 +16,7 @@ module Esvg
       output_path: Dir.pwd,
       verbose: false,
       format: 'js',
+      throttle_read: 4,
       alias: {}
     }
 
@@ -27,6 +28,7 @@ module Esvg
       config(options)
 
       @svgo = nil
+      @last_read = nil
       @svgs = {}
 
       read_files
@@ -85,17 +87,26 @@ module Esvg
 
     def embed
       return if files.empty?
-      case config[:format]
-      when "html"
+      output = if config[:format] == "html"
         html
-      when "js"
+      elsif config[:format] == "js"
         js
-      when "css"
+      elsif config[:format] == "css"
         css
+      end
+
+      if Esvg.rails?
+        output.html_safe
+      else
+        output
       end
     end
 
     def read_files
+      if !@last_read.nil? && (Time.now.to_i - @last_read) < config[:throttle_read]
+        return
+      end
+
       @files = {}
 
       # Get a list of svg files and modification times
@@ -103,6 +114,8 @@ module Esvg
       find_files.each do |f|
         files[f] = File.mtime(f)
       end
+
+      @last_read = Time.now.to_i
 
       puts "Read #{files.size} files from #{config[:path]}" if config[:cli]
 
@@ -151,7 +164,11 @@ module Esvg
         if fallback = options.delete(:fallback)
           svg_icon(fallback, options)
         else
-          raise "no svg named '#{get_alias(file)}' exists at #{config[:path]}"
+          if Esvg.rails? && Rails.env.production?
+            return ''
+          else
+            raise "no svg named '#{get_alias(file)}' exists at #{config[:path]}"
+          end
         end
       else
 
@@ -166,7 +183,13 @@ module Esvg
           end
         end
 
-        embed.sub(/><\/svg/, ">#{title(options)}#{desc(options)}</svg")
+        embed = embed.sub(/><\/svg/, ">#{title(options)}#{desc(options)}</svg")
+
+        if Esvg.rails?
+          embed.html_safe
+        else
+          embed
+        end
       end
     end
 

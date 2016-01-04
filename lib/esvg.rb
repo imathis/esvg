@@ -11,26 +11,12 @@ end
 module Esvg
   extend self
 
-  def icons(options={})
-    @icons ||= SVG.new(options)
-
-    if !rails? || Rails.env.development?
-      @icons.read_files
-    end
-
-    @icons
+  def new(options={})
+    SVG.new(options)
   end
 
-  def embed(options={})
-    icons(options).embed
-  end
-
-  def svg_icon(name, options={})
-    @icons.svg_icon(name, options)
-  end
-
-  def exist?(name)
-    @icons.exist?(name)
+  def embed
+    new.embed
   end
 
   def rails?
