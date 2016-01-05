@@ -1,5 +1,9 @@
 # Changelog
 
+### 2.8.4 (2016-01-05)
+- Fix: Dasherize file names to avoid inconsistencies with underscores or dashes in filenames.
+- Minor test improvements.
+
 ### 2.8.3 (2016-01-04)
 - Fix: file read throttling
 - Fix: Caching for Rails helper
