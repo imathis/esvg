@@ -159,8 +159,9 @@ module Esvg
     end
 
     def svg_icon(file, options={})
+      name = dasherize(file)
 
-      if !exist?(file)
+      if !exist?(name)
         if fallback = options.delete(:fallback)
           svg_icon(fallback, options)
         else
@@ -172,7 +173,7 @@ module Esvg
         end
       else
 
-        embed = use_icon(file)
+        embed = use_icon(name)
         embed = embed.sub(/class="(.+?)"/, 'class="\1 '+options[:class]+'"') if options[:class]
 
         if options[:style]
