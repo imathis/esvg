@@ -27,4 +27,4 @@ end
 write_file('build/use/icon.html', use)
 write_file('build/use/fallback.html', fallback)
 write_file('build/use/alias.html', use_alias)
-write_file('build/use/alias.html', use_style)
+write_file('build/use/style.html', use_style)
