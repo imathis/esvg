@@ -1,5 +1,8 @@
 # Changelog
 
+### 2.8.5 (2016-01-08)
+- Fix: Restored `svg_icon` helper to rails helpers.
+
 ### 2.8.4 (2016-01-05)
 - Fix: Dasherize file names to avoid inconsistencies with underscores or dashes in filenames.
 - Minor test improvements.
