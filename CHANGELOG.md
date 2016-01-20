@@ -1,5 +1,8 @@
 # Changelog
 
+### 2.8.7 (2016-01-20)
+- Fix: Fixed an accidental regex regression.
+
 ### 2.8.6 (2016-01-20)
 - Fix: Some regexes weren't specific enough and were interfering with icon names.
 

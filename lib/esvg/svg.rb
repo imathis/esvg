@@ -361,7 +361,7 @@ module Esvg
           symbols << prep_svg(name, data[:content])
         end
 
-        symbols = optimize(symbols.join).gsub(/class=/,'id=').gsub(/<svg/,'<symbol')
+        symbols = optimize(symbols.join).gsub(/class=/,'id=').gsub(/svg/,'symbol')
 
         %Q{<svg id="esvg-symbols" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none">#{symbols}</svg>}
       end
