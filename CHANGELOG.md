@@ -1,5 +1,8 @@
 # Changelog
 
+### 2.8.6 (2016-01-20)
+- Fix: Some regexes weren't specific enough and were interfering with icon names.
+
 ### 2.8.5 (2016-01-08)
 - Fix: Restored `svg_icon` helper to rails helpers.
 
