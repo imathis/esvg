@@ -6,14 +6,12 @@ module Esvg
     attr_accessor :files, :svgs, :last_read
 
     CONFIG = {
-      path: Dir.pwd,
       base_class: 'svg-icon',
       namespace: 'icon',
       optimize: false,
       npm_path: false,
       namespace_before: true,
       font_size: '1em',
-      output_path: Dir.pwd,
       verbose: false,
       format: 'js',
       throttle_read: 4,
@@ -21,7 +19,9 @@ module Esvg
     }
 
     CONFIG_RAILS = {
-      path: "app/assets/esvg"
+      path: "app/assets/esvg",
+      js_path: "app/assets/javascripts/esvg.js",
+      css_path: "app/assets/stylesheets/esvg.css"
     }
 
     def initialize(options={})
@@ -39,13 +39,19 @@ module Esvg
         paths = [options[:config_file], 'config/esvg.yml', 'esvg.yml'].compact
 
         config = CONFIG
-        config.merge!(CONFIG_RAILS) if Esvg.rails?
+
+        if Esvg.rails? || options[:rails]
+          config.merge!(CONFIG_RAILS) 
+        end
 
         if path = paths.select{ |p| File.exist?(p)}.first
           config.merge!(symbolize_keys(YAML.load(File.read(path) || {})))
         end
 
         config.merge!(options)
+        
+        config[:path] ||= Dir.pwd
+        config[:output_path] ||= Dir.pwd
 
         if config[:cli]
           config[:path] = File.expand_path(config[:path])

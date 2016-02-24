@@ -20,6 +20,10 @@ OptionParser.new do |opts|
     options[:config_file] = path
   end
 
+  opts.on("-r", "--rails", "Use Rails defaults") do
+    options[:rails] = true
+  end
+
   opts.on("-O", "--optimize", "Optimize svgs with svgo") do |svgo|
     options[:optimize] = svgo
   end
@@ -28,7 +32,7 @@ OptionParser.new do |opts|
     options[:npm_path] = path
   end
 
-  opts.on("-l", "--log", "Print version") do |version|
+  opts.on("-v", "--version", "Print version") do |version|
     options[:version] = true
   end
 
@@ -37,7 +41,11 @@ end.parse!
 if options[:version]
   puts "Esvg #{Esvg::VERSION}"
 else
-  options[:path] = ARGV.shift
+
+  if path = ARGV.shift
+    options[:path] = path
+  end
+
   options[:cli] = true
   esvg = Esvg::SVG.new(options).write
 end
