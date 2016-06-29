@@ -1,5 +1,11 @@
 # Changelog
 
+### 2.8.9 (2016-06-29)
+- Fix: Now write path is returned after write.
+
+### 2.8.8 (2016-02-23)
+- Fix: Improved detection of Rails from CLI making it easier to use Rails defaults.
+
 ### 2.8.7 (2016-01-20)
 - Fix: Fixed an accidental regex regression.
 

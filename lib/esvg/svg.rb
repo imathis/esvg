@@ -259,17 +259,17 @@ module Esvg
 
     def write
       return if @files.empty?
-      case config[:format]
+      write_path = case config[:format]
       when "html"
         write_html
-        puts "Written to #{log_path config[:html_path]}" if config[:cli]
       when "js"
         write_js
-        puts "Written to #{log_path config[:js_path]}" if config[:cli]
       when "css"
         write_css
-        puts "Written to #{log_path config[:css_path]}" if config[:cli]
       end
+
+      puts "Written to #{log_path write_path}" if config[:cli]
+      write_path
     end
 
     def log_path(path)
@@ -284,14 +284,17 @@ module Esvg
 
     def write_js
       write_file config[:js_path], js
+      config[:js_path]
     end
 
     def write_css
       write_file config[:css_path], css
+      config[:css_path]
     end
     
     def write_html
       write_file config[:html_path], html
+      config[:html_path]
     end 
 
     def write_file(path, contents)
