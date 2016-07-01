@@ -9,7 +9,6 @@ module Esvg
       base_class: 'svg-icon',
       namespace: 'icon',
       optimize: false,
-      npm_path: false,
       namespace_before: true,
       font_size: '1em',
       verbose: false,
@@ -27,7 +26,6 @@ module Esvg
     def initialize(options={})
       config(options)
 
-      @svgo = nil
       @last_read = nil
       @svgs = {}
 
@@ -277,7 +275,7 @@ module Esvg
     end
 
     def write_svg(svg)
-      path = File.join(config[:path], '.esvg-cache')
+      path = File.join((config[:tmp_path] || config[:path]), '.esvg-tmp')
       write_file path, svg
       path
     end
@@ -352,9 +350,9 @@ module Esvg
     end
 
     def optimize(svg)
-      if config[:optimize] && svgo?
+      if config[:optimize] && svgo_path = find_node_module('svgo')
         path = write_svg(svg)
-        svg = `#{@svgo} '#{path}' -o -`
+        svg = `#{svgo_path} '#{path}' -o -`
         FileUtils.rm(path)
       end
 
@@ -435,22 +433,18 @@ if(typeof(module) != 'undefined') { module.exports = esvg }
 }
     end
 
-    def svgo?
-      @svgo ||= begin
-        npm_path   = "#{config[:npm_path] || Dir.pwd}/node_modules"
-        local_path = File.join(npm_path, "svgo/bin/svgo")
+    def find_node_module(cmd)
+      require 'open3'
 
-        if config[:npm_path] && !File.exist?(npm_path)
-          abort "NPM Path not found: #{File.expand_path(config[:npm_path])}"
-        end
+      response = Open3.capture3("npm ls #{cmd}")
 
-        if File.exist?(local_path)
-          local_path
-        elsif `npm ls -g svgo`.match(/empty/).nil?
-          "svgo"
-        else
-          false
-        end
+      # Check for error
+      if response[1].empty?
+        "$(npm bin)/#{cmd}"
+
+      # Attempt global module path
+      elsif Open3.capture3("npm ls -g #{cmd}")[1].empty?
+        cmd
       end
     end
 

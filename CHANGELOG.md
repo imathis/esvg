@@ -1,5 +1,8 @@
 # Changelog
 
+### 2.8.10 (2016-07-01)
+- Fix: Improved svgo detection; no longer requires svgo_path.
+
 ### 2.8.9 (2016-06-29)
 - Fix: Now write path is returned after write.
 

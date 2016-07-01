@@ -28,10 +28,6 @@ OptionParser.new do |opts|
     options[:optimize] = svgo
   end
 
-  opts.on("-n", "--npm", String, "Path to node_modules director") do |path|
-    options[:npm_path] = path
-  end
-
   opts.on("-v", "--version", "Print version") do |version|
     options[:version] = true
   end
