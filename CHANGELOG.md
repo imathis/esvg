@@ -1,5 +1,8 @@
 # Changelog
 
+### 2.9.1 (2016-07-18)
+- New: `use` method is an alias for svg_icon
+
 ### 2.9.0 (2016-07-18)
 - New: `icon` method accepts fill, color, height, and width
 

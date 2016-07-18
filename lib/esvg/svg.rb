@@ -200,6 +200,8 @@ module Esvg
       end
     end
 
+    alias :use :svg_icon
+
     def add_attribute(tag, attr, content=nil, append=false)
       return tag if content.nil?
       if tag.match(/#{attr}/)
