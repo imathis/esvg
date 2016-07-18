@@ -12,7 +12,11 @@ module Esvg
   extend self
 
   def new(options={})
-    SVG.new(options)
+    @svgs = SVG.new(options)
+  end
+
+  def svgs
+    @svgs
   end
 
   def embed

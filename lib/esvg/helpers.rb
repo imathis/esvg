@@ -1,11 +1,17 @@
 module Esvg::Helpers
   def svg_icons(options={})
-    @@svg_icons ||= Esvg.new(options)
-    @@svg_icons.read_files if Rails.env.development?
-    @@svg_icons
+    svgs = Esvg.svgs
+
+    if svgs.nil? || !options.empty?
+      svgs = Esvg.new(options)
+    end
+
+    svgs.read_files if Rails.env.development?
+
+    svgs
   end
 
   def svg_icon(name, options={})
-    svg_icons.svg_icon(name, options).html_safe
+    svg_icons.use(name, options).html_safe
   end
 end
