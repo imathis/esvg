@@ -1,5 +1,8 @@
 # Changelog
 
+### 2.9.0 (2016-07-18)
+- New: `icon` method accepts fill, color, height, and width
+
 ### 2.8.10 (2016-07-01)
 - Fix: Improved svgo detection; no longer requires svgo_path.
 

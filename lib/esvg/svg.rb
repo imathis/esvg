@@ -180,13 +180,15 @@ module Esvg
         embed = use_icon(name)
         embed = embed.sub(/class="(.+?)"/, 'class="\1 '+options[:class]+'"') if options[:class]
 
-        if options[:style]
-          if embed.match(/style/)
-            embed = embed.sub(/style="(.+?)"/, 'style="\1; '+options[:style]+'"')
-          else
-            embed = embed.sub(/><use/, %Q{ style="#{options[:style]}"><use})
-          end
+        if options[:color]
+          options[:style] ||= ''
+          options[:style] += ";color:#{options[:color]};"
         end
+
+        embed = add_attribute(embed, 'style', options[:style], ';')
+        embed = add_attribute(embed, 'fill', options[:fill])
+        embed = add_attribute(embed, 'height', options[:height])
+        embed = add_attribute(embed, 'width', options[:width])
 
         embed = embed.sub(/><\/svg/, ">#{title(options)}#{desc(options)}</svg")
 
@@ -195,6 +197,19 @@ module Esvg
         else
           embed
         end
+      end
+    end
+
+    def add_attribute(tag, attr, content=nil, append=false)
+      return tag if content.nil?
+      if tag.match(/#{attr}/)
+        if append
+          tag.sub(/#{attr}="(.+?)"/, attr+'="\1'+append+content+'"')
+        else
+          tag.sub(/#{attr}=".+?"/, attr+'="'+content+'"')
+        end
+      else
+        tag.sub(/><use/, %Q{ #{attr}="#{content}"><use})
       end
     end
 
