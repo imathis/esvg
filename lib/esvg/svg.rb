@@ -204,6 +204,7 @@ module Esvg
 
     def add_attribute(tag, attr, content=nil, append=false)
       return tag if content.nil?
+      content = content.to_s
       if tag.match(/#{attr}/)
         if append
           tag.sub(/#{attr}="(.+?)"/, attr+'="\1'+append+content+'"')

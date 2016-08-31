@@ -1,5 +1,8 @@
 # Changelog
 
+### 2.9.2 (2016-08-31)
+- Fix: Attributes width and height are now properly converted to strings.
+
 ### 2.9.1 (2016-07-18)
 - New: `use` method is an alias for svg_icon
 - Fix: Esvg.new caches instances to be used by Rails helper methods
