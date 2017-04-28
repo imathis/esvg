@@ -10,3 +10,4 @@
 /test/build
 /test/optimized
 .DS_Store
+node_modules
