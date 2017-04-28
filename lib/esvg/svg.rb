@@ -3,7 +3,7 @@ require 'json'
 
 module Esvg
   class SVG
-    attr_accessor :files, :svgs, :last_read
+    attr_accessor :files, :svgs, :last_read, :svg_cache
 
     CONFIG = {
       base_class: 'svg-icon',
@@ -27,6 +27,7 @@ module Esvg
       config(options)
 
       @last_read = nil
+      @svg_cache = {}
       @svgs = {}
 
       read_files
@@ -136,15 +137,20 @@ module Esvg
       files.each do |file, mtime|
         name = file_key(file)
 
-        if svgs[name].nil? || svgs[name][:last_modified] != mtime
-          svgs[name] = process_file(file, mtime, name)
+        if svg_cache[name].nil? || svg_cache[name][:last_modified] != mtime
+          svg_cache[name] = process_file(file, mtime, name)
         end
       end
 
       # Remove deleted svgs
       #
-      (svgs.keys - files.keys.map {|file| file_key(file) }).each do |file|
-        svgs.delete(file)
+      (svg_cache.keys - files.keys.map {|file| file_key(file) }).each do |file|
+        svg_cache.delete(file)
+      end
+
+      svg_cache.each do |file, data|
+        svgs[File.dirname( file )] ||= {}
+        svgs[File.dirname( file )][file] = data
       end
     end
 
@@ -239,20 +245,19 @@ module Esvg
     alias_method :exists?, :exist?
 
     def classname(name)
-      name = dasherize(name)
       if config[:namespace_before]
-        "#{config[:namespace]}-#{name}"
+        dasherize "#{config[:namespace]}-#{name}"
       else
-        "#{name}-#{config[:namespace]}"
+        dasherize "#{name}-#{config[:namespace]}"
       end
     end
 
     def dasherize(input)
-      input.gsub(/[\W,_]/, '-').gsub(/-{2,}/, '-')
+      input.gsub(/[\W,_]/, '-').sub(/^-/,'').gsub(/-{2,}/, '-')
     end
 
     def find_files
-      path = File.expand_path(File.join(config[:path], '*.svg'))
+      path = File.expand_path(File.join(config[:path], '**/*.svg'))
       Dir[path].uniq
     end
 
@@ -299,18 +304,23 @@ module Esvg
     end
 
     def write_js
-      write_file config[:js_path], js
+      write_file config[:js_path], js('.')
       config[:js_path]
     end
 
     def write_css
-      write_file config[:css_path], css
+      write_file config[:css_path], css('.')
       config[:css_path]
     end
     
     def write_html
-      write_file config[:html_path], html
-      config[:html_path]
+      paths = []
+      svgs.each do |key, files|
+        path = write_path(:html_path, key)
+        write_file path, html(key)
+        paths.push path
+      end
+      paths.join(', ')
     end 
 
     def write_file(path, contents)
@@ -320,7 +330,15 @@ module Esvg
       end
     end
 
-    def css
+    def write_path(path, key)
+      if key == '.'
+        config[path]
+      else
+        config[path].sub(/.+?\./, key)
+      end
+    end
+
+    def css(key)
       styles = []
       
       classes = svgs.keys.map{|k| ".#{classname(k)}"}.join(', ')
@@ -342,7 +360,7 @@ module Esvg
 }}
       styles << preamble
 
-      svgs.each do |name, data|
+      svgs[key].each do |name, data|
         if data[:css]
           styles << css
         else
@@ -377,26 +395,34 @@ module Esvg
       svg
     end
 
-    def html
+    def html(key)
       if @files.empty?
         ''
       else
         symbols = []
-        svgs.each do |name, data|
+        svgs[key].each do |name, data|
           symbols << prep_svg(name, data[:content])
         end
 
         symbols = optimize(symbols.join).gsub(/class=/,'id=').gsub(/svg/,'symbol')
 
-        %Q{<svg id="esvg-symbols" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none">#{symbols}</svg>}
+        svg_symbols symbols
       end
     end
 
-    def js
+    def svg_symbols(symbols)
+      %Q{<svg id="esvg-symbols" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none">#{symbols}</svg>}
+    end
+
+    def embed_html_in_js(input)
+      input.gsub(/\n/,'').gsub("'"){"\\'"}
+    end
+
+    def js(key)
       %Q{var esvg = {
   embed: function(){
     if (!document.querySelector('#esvg-symbols')) {
-      document.querySelector('body').insertAdjacentHTML('afterbegin', '#{html.gsub(/\n/,'').gsub("'"){"\\'"}}')
+      document.querySelector('body').insertAdjacentHTML('afterbegin', '#{embed_html_in_js(html(key))}')
     }
   },
   icon: function(name, classnames) {
@@ -428,7 +454,7 @@ module Esvg
     if (document.readyState == 'interactive') { this.embed() }
 
     // Handle Turbolinks (or other things that fire page change events)
-    document.addEventListener("page:change", function(event) { this.embed() }.bind(this))
+    document.addEventListener("turbolinks:load", function(event) { this.embed() }.bind(this))
 
     // Handle standard DOM ready events
     document.addEventListener("DOMContentLoaded", function(event) { this.embed() }.bind(this))
@@ -467,10 +493,10 @@ if(typeof(module) != 'undefined') { module.exports = esvg }
     end
 
     def file_key(name)
-      dasherize(File.basename(name, ".*"))
+      root_path  = File.expand_path(config[:path])
+      name.sub("#{root_path}/",'').sub('.svg', '')
     end
-
-
+    
     def symbolize_keys(hash)
       h = {}
       hash.each {|k,v| h[k.to_sym] = v }
