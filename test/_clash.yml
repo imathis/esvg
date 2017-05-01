@@ -1,15 +1,17 @@
 - 
   title: "Test JS"
   before: esvg svg_icons -o build --config _alias.yml
-  compare: expected/standard/esvg.js build/esvg.js
-- 
-  title: "Test CSS"
-  before: esvg svg_icons -f css -o build
-  compare: expected/standard/esvg.css build/esvg.css
+  compare: 
+    - expected/standard/esvg-core.js build/esvg-core.js
+    - expected/standard/esvg.js build/esvg.js
+    - expected/standard/_others.js build/_others.js
 - 
   title: "Test HTML"
   before: esvg svg_icons -f html -o build
-  compare: expected/standard/esvg.html build/esvg.html
+  compare: 
+    - expected/standard/esvg.html build/esvg.html
+    - expected/standard/flatten.html build/flatten.html
+    - expected/standard/_others.html build/_others.html
 - 
   title: "Test USE icon with alias"
   before: ruby use_icon.rb

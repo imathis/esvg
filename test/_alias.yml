@@ -1,2 +1,4 @@
 alias:
   comment_bubble: chat-bubble, chat, comment, comments
+flatten:
+  - flatten
