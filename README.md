@@ -1,6 +1,6 @@
 # Esvg
 
-Easily embed optimized SVGs in JS, HTML, or CSS. Use as a standalone tool or with Rails.
+Easily embed optimized SVGs in JS or HTML. Use as a standalone tool or with Rails.
 
 1. Converts a directory full of SVGs into a single optimized SVG using symbols.
 2. Uses Javascript to inject SVGs into pages, so it's easily cacheable.
@@ -97,7 +97,6 @@ $ esvg PATH [options]
 $ esvg                          # Read icons from current directory, write js to ./esvg.js
 $ esvg icons                    # Read icons from 'icons' directory, write js to ./esvg.js
 $ esvg --output embedded        # Read icons from current directory, write js to embedded/esvg.js
-$ esvg -f --format              # Embed icons in Stylesheet and write to ./esvg.scss
 $ esvg -c --config foo.yml      # Read confguration from foo.yml (otherwise, defaults to esvg.yml, or config/esvg.yml)
 ```
 
@@ -108,17 +107,15 @@ If you're using esvg from the command line, configuration files are read from `.
 ```
 path: .                     # Where to find SVG icons (Rails defaults to app/assets/esvg)
 output_path: .              # Where to write output files (CLI only)
-format: js                  # Format for output (js, html, css)
+format: js                  # Format for output (js, html)
 
 base_class: svg-icon        # Select all icons with this base classname
-namespace: icon             # Namespace for symbol ids or CSS classnames
+namespace: icon             # Namespace for symbol ids
 namespace_before: true      # Add namespace before, e.g. icon-kitten
 
 alias:                      # Add aliases for icon names
   comment: chat             # use "chat" to reference comment.svg
   error: bad, broken        # Use "bad" or "broken" to reference error.svg
-
-font_size: 1em              # Default size for SVGs (if embeded in stylesheets)
 ```
 
 ## Contributing
