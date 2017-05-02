@@ -15,12 +15,16 @@ use_alias = svgs.svg_icon('chat-bubble')
 # Test fallback option
 fallback = svgs.svg_icon('boo', fallback: 'comment-bubble')
 
+def log_path(path)
+  File.expand_path(path).sub(File.expand_path(Dir.pwd), '').sub(/^\//,'')
+end
+
 def write_file(path, contents)
   path = File.expand_path(path)
   FileUtils.mkdir_p(File.dirname(path))
   File.open(path, 'w') do |io|
     io.write(contents)
-    puts "written to #{path}"
+    puts "Written to #{log_path path}"
   end
 end
 
