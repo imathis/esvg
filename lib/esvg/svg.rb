@@ -355,11 +355,20 @@ module Esvg
     end
 
     def write_path(path, key)
-      if key == "."
-        config[path]
-      else
-        config[path].sub(/[^\/]+?\./, key+'.')
+      # Write esvg-core.js
+      return config[path] if key == "."
+
+      if !key.start_with?('_') && path.to_s.start_with?('js')
+        if config[:js_build_version]
+          key = "#{key}-#{config[:js_build_version]}"
+        end
+
+        if config[:js_build_dir]
+          return File.join(config[:js_build_dir], key+'.js')
+        end
       end
+
+      config[path].sub(/[^\/]+?\./, key+'.')
     end
 
     def prep_svg(file, content)
