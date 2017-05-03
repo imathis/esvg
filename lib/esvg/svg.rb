@@ -3,7 +3,7 @@ require 'json'
 
 module Esvg
   class SVG
-    attr_accessor :files, :svgs, :last_read
+    attr_accessor :files, :svgs, :last_read, :svg_cache
 
     CONFIG = {
       base_class: 'svg-icon',
@@ -14,20 +14,20 @@ module Esvg
       verbose: false,
       format: 'js',
       throttle_read: 4,
+      flatten: [],
       alias: {}
     }
 
     CONFIG_RAILS = {
       path: "app/assets/esvg",
       js_path: "app/assets/javascripts/esvg.js",
-      css_path: "app/assets/stylesheets/esvg.css"
     }
 
     def initialize(options={})
       config(options)
 
       @last_read = nil
-      @svgs = {}
+      @svg_cache = {}
 
       read_files
     end
@@ -56,11 +56,12 @@ module Esvg
           config[:output_path] = File.expand_path(config[:output_path])
         end
 
-        config[:js_path]   ||= File.join(config[:output_path], 'esvg.js')
-        config[:css_path]  ||= File.join(config[:output_path], 'esvg.css')
-        config[:html_path] ||= File.join(config[:output_path], 'esvg.html')
+        config[:js_path]        ||= File.join(config[:output_path], 'esvg.js')
+        config[:js_core_path]   ||= config[:js_path].sub(/[^\/]+?\./, '_esvg-core.')
+        config[:html_path]      ||= File.join(config[:output_path], 'esvg.html')
         config.delete(:output_path)
         config[:aliases] = load_aliases(config[:alias])
+        config[:flatten] = config[:flatten].map { |dir| File.join(dir, '/') }.join('|')
 
         config
       end
@@ -95,8 +96,6 @@ module Esvg
         html
       elsif config[:format] == "js"
         js
-      elsif config[:format] == "css"
-        css
       end
 
       if Esvg.rails?
@@ -133,24 +132,42 @@ module Esvg
     # Add new svgs, update modified svgs, remove deleted svgs
     #
     def process_files
-      files.each do |file, mtime|
-        name = file_key(file)
+      @svgs = {}
 
-        if svgs[name].nil? || svgs[name][:last_modified] != mtime
-          svgs[name] = process_file(file, mtime, name)
+      files.each do |path, mtime|
+        key = file_key( path )
+
+        if svg_cache[key].nil? || svg_cache[key][:last_modified] != mtime
+          svg_cache[key] = process_file(path, mtime, key)
         end
+
+        svgs[File.dirname( flatten_path( path ) )] ||= {}
+        svgs[File.dirname( flatten_path( path ) )][key] = svg_cache[key]
       end
 
       # Remove deleted svgs
       #
-      (svgs.keys - files.keys.map {|file| file_key(file) }).each do |file|
-        svgs.delete(file)
+      (svg_cache.keys - files.keys.map {|file| file_key(file) }).each do |f|
+        svg_cache.delete(f)
       end
+
+    end
+
+    def flatten_path(path)
+      root_path = File.expand_path(config[:path])
+
+      path.sub("#{root_path}/",'').sub('.svg', '')
+          .sub(Regexp.new(config[:flatten]), '')
+    end
+
+    def file_key(path)
+      dasherize flatten_path(path)
     end
 
     def process_file(file, mtime, name)
       content = File.read(file).gsub(/<?.+\?>/,'').gsub(/<!.+?>/,'')
       {
+        name: name,
         content: content,
         use: use_svg(name, content),
         last_modified: mtime
@@ -158,12 +175,13 @@ module Esvg
     end
 
     def use_svg(file, content)
-      name = classname(get_alias(file))
-      %Q{<svg class="#{config[:base_class]} #{name}" #{dimensions(content)}><use xlink:href="##{name}"/></svg>}
+      name = classname get_alias(file)
+      viewbox = content.scan(/<svg.+(viewBox=["'](.+?)["'])/).flatten.first
+      %Q{<svg class="#{config[:base_class]} #{name}" #{viewbox}><use xlink:href="##{name}"/></svg>}
     end
 
     def svg_icon(file, options={})
-      name = dasherize(file)
+      name = dasherize file
 
       if !exist?(name)
         if fallback = options.delete(:fallback)
@@ -228,31 +246,30 @@ module Esvg
 
     def use_icon(name)
       name = get_alias(name)
-      svgs[name][:use]
+      svg_cache[name][:use]
     end
 
     def exist?(name)
       name = get_alias(name)
-      !svgs[name].nil?
+      !svg_cache[name].nil?
     end
 
     alias_method :exists?, :exist?
 
     def classname(name)
-      name = dasherize(name)
       if config[:namespace_before]
-        "#{config[:namespace]}-#{name}"
+        dasherize "#{config[:namespace]}-#{name}"
       else
-        "#{name}-#{config[:namespace]}"
+        dasherize "#{name}-#{config[:namespace]}"
       end
     end
 
     def dasherize(input)
-      input.gsub(/[\W,_]/, '-').gsub(/-{2,}/, '-')
+      input.gsub(/[\W,_]/, '-').sub(/^-/,'').gsub(/-{2,}/, '-')
     end
 
     def find_files
-      path = File.expand_path(File.join(config[:path], '*.svg'))
+      path = File.expand_path(File.join(config[:path], '**/*.svg'))
       Dir[path].uniq
     end
 
@@ -275,17 +292,18 @@ module Esvg
 
     def write
       return if @files.empty?
-      write_path = case config[:format]
+      write_paths = case config[:format]
       when "html"
         write_html
       when "js"
         write_js
-      when "css"
-        write_css
       end
 
-      puts "Written to #{log_path write_path}" if config[:cli]
-      write_path
+      write_paths.each do |path|
+        puts "Written to #{log_path path}" if config[:cli]
+      end
+
+      write_paths
     end
 
     def log_path(path)
@@ -299,18 +317,34 @@ module Esvg
     end
 
     def write_js
-      write_file config[:js_path], js
-      config[:js_path]
+      paths = []
+
+      unless config[:js_core_path] == false
+        path = config[:js_core_path]
+        write_file path, js_core
+
+        paths.push path
+      end
+
+      svgs.each do |key, files|
+        path = write_path(:js_path, key)
+        write_file path, js(key)
+        paths.push path
+      end
+
+      paths
     end
 
-    def write_css
-      write_file config[:css_path], css
-      config[:css_path]
-    end
-    
     def write_html
-      write_file config[:html_path], html
-      config[:html_path]
+      paths = []
+
+      svgs.each do |key, files|
+        path = write_path(:html_path, key)
+        write_file path, html(key)
+        paths.push path
+      end
+
+      paths
     end 
 
     def write_file(path, contents)
@@ -320,40 +354,12 @@ module Esvg
       end
     end
 
-    def css
-      styles = []
-      
-      classes = svgs.keys.map{|k| ".#{classname(k)}"}.join(', ')
-      preamble = %Q{#{classes} { 
-  font-size: #{config[:font_size]};
-  clip: auto;
-  background-size: auto;
-  background-repeat: no-repeat;
-  background-position: center center;
-  display: inline-block;
-  overflow: hidden;
-  background-size: auto 1em;
-  height: 1em;
-  width: 1em;
-  color: inherit;
-  fill: currentColor;
-  vertical-align: middle;
-  line-height: 1em;
-}}
-      styles << preamble
-
-      svgs.each do |name, data|
-        if data[:css]
-          styles << css
-        else
-          svg_css = data[:content].gsub(/</, '%3C') # escape <
-                                  .gsub(/>/, '%3E') # escape >
-                                  .gsub(/#/, '%23') # escape #
-                                  .gsub(/\n/,'')    # remove newlines
-          styles << data[:css] = ".#{classname(name)} { background-image: url('data:image/svg+xml;utf-8,#{svg_css}'); }"
-        end
+    def write_path(path, key)
+      if key == "."
+        config[path]
+      else
+        config[path].sub(/[^\/]+?\./, key+'.')
       end
-      styles.join("\n")
     end
 
     def prep_svg(file, content)
@@ -361,10 +367,9 @@ module Esvg
              .gsub(/\n/, '')                 # Remove endlines
              .gsub(/\s{2,}/, ' ')            # Remove whitespace
              .gsub(/>\s+</, '><')            # Remove whitespace between tags
+             .gsub(/\s?fill="(#0{3,6}|black|rgba?\(0,0,0\))"/,'')      # Strip black fill
              .gsub(/style="([^"]*?)fill:(.+?);/m, 'fill="\2" style="\1')                   # Make fill a property instead of a style
              .gsub(/style="([^"]*?)fill-opacity:(.+?);/m, 'fill-opacity="\2" style="\1')   # Move fill-opacity a property instead of a style
-             .gsub(/\s?style=".*?";?/,'')    # Strip style property
-             .gsub(/\s?fill="(#0{3,6}|black|rgba?\(0,0,0\))"/,'')      # Strip black fill
     end
 
     def optimize(svg)
@@ -377,28 +382,31 @@ module Esvg
       svg
     end
 
-    def html
-      if @files.empty?
+    def html(key)
+      if svgs[key].empty?
         ''
       else
         symbols = []
-        svgs.each do |name, data|
+        svgs[key].each do |name, data|
           symbols << prep_svg(name, data[:content])
         end
 
         symbols = optimize(symbols.join).gsub(/class=/,'id=').gsub(/svg/,'symbol')
 
-        %Q{<svg id="esvg-symbols" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none">#{symbols}</svg>}
+        %Q{<svg id="esvg-#{key_id(key)}" version="1.1" style="height:0;position:absolute">#{symbols}</svg>}
       end
     end
 
-    def js
+    def key_id(key)
+      (key == '.') ? 'symbols' : classname(key)
+    end
+
+    def svg_to_js(key)
+      html(key).gsub(/\n/,'').gsub("'"){"\\'"}
+    end
+
+    def js_core
       %Q{var esvg = {
-  embed: function(){
-    if (!document.querySelector('#esvg-symbols')) {
-      document.querySelector('body').insertAdjacentHTML('afterbegin', '#{html.gsub(/\n/,'').gsub("'"){"\\'"}}')
-    }
-  },
   icon: function(name, classnames) {
     var svgName = this.iconName(name)
     var element = document.querySelector('#'+svgName)
@@ -423,16 +431,6 @@ module Esvg
   dasherize: function(input) {
     return input.replace(/[\W,_]/g, '-').replace(/-{2,}/g, '-')
   },
-  load: function(){
-    // If DOM is already ready, embed SVGs
-    if (document.readyState == 'interactive') { this.embed() }
-
-    // Handle Turbolinks (or other things that fire page change events)
-    document.addEventListener("page:change", function(event) { this.embed() }.bind(this))
-
-    // Handle standard DOM ready events
-    document.addEventListener("DOMContentLoaded", function(event) { this.embed() }.bind(this))
-  },
   aliases: #{config[:aliases].to_json},
   alias: function(name) {
     var aliased = this.aliases[name]
@@ -444,11 +442,31 @@ module Esvg
   }
 }
 
-esvg.load()
-
 // Work with module exports:
 if(typeof(module) != 'undefined') { module.exports = esvg }
 }
+    end
+
+    def js(key)
+      %Q{(function(){
+
+  function embed() {
+    if (!document.querySelector('#esvg-#{key_id(key)}')) {
+      document.querySelector('body').insertAdjacentHTML('afterbegin', '#{svg_to_js(key)}')
+    }
+  }
+
+  // If DOM is already ready, embed SVGs
+  if (document.readyState == 'interactive') { embed() }
+
+  // Handle Turbolinks page change events
+  if ( window.Turbolinks ) {
+    document.addEventListener("turbolinks:load", function(event) { embed() })
+  }
+
+  // Handle standard DOM ready events
+  document.addEventListener("DOMContentLoaded", function(event) { embed() })
+})()}
     end
 
     def find_node_module(cmd)
@@ -465,11 +483,6 @@ if(typeof(module) != 'undefined') { module.exports = esvg }
         cmd
       end
     end
-
-    def file_key(name)
-      dasherize(File.basename(name, ".*"))
-    end
-
 
     def symbolize_keys(hash)
       h = {}
