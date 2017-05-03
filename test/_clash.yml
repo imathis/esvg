@@ -2,7 +2,7 @@
   title: "Test JS"
   before: esvg svg_icons -o build --config _alias.yml
   compare: 
-    - expected/standard/esvg-core.js build/esvg-core.js
+    - expected/standard/esvg-core.js build/_esvg-core.js
     - expected/standard/esvg.js build/esvg.js
     - expected/standard/_others.js build/_others.js
 - 
