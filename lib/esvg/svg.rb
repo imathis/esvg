@@ -150,7 +150,16 @@ module Esvg
       (svg_cache.keys - files.keys.map {|file| file_key(file) }).each do |f|
         svg_cache.delete(f)
       end
+    end
 
+    def build_paths
+      build_keys = svgs.keys.reject do |key|
+        key == '.' ||
+        key.match(/^_/) ||
+        config[:flatten].include?(key)
+      end
+
+      build_keys.map { | key | File.expand_path(build_path(key)) }
     end
 
     def flatten_path(path)
@@ -354,21 +363,50 @@ module Esvg
       end
     end
 
+    def build_path(key)
+      dir = config[:js_build_dir] || File.dirname(config[:js_path])
+           
+      if config[:js_build_version]
+        key = "#{key}-#{config[:js_build_version]}"
+      end
+
+      File.join(dir, key+'.js')
+    end
+
     def write_path(path, key)
-      # Write esvg-core.js
+      # Write root svgs
       return config[path] if key == "."
 
       if !key.start_with?('_') && path.to_s.start_with?('js')
-        if config[:js_build_version]
-          key = "#{key}-#{config[:js_build_version]}"
-        end
+        build_path(key)
+      else
+        config[path].sub(/[^\/]+?\./, key+'.')
+      end
+    end
 
-        if config[:js_build_dir]
-          return File.join(config[:js_build_dir], key+'.js')
+    # Scans <def> blocks for IDs
+    # If urls(#id) are used, ensure these IDs are unique to this file
+    # Only replace IDs if urls exist to avoid replacing defs
+    # used in other svg files
+    #
+    def sub_def_ids(file, content)
+      return content unless !!content.match(/<defs>/)
+
+      content.scan(/<defs>.+<\/defs>/m).flatten.each do |defs|
+        defs.scan(/id="(.+?)"/).flatten.uniq.each_with_index do |id, index|
+
+          if content.match(/url\(##{id}\)/)
+            new_id = "#{classname(file)}-ref#{index}"
+
+            content = content.gsub(/id="#{id}"/, %Q{class="#{new_id}"})
+                             .gsub(/url\(##{id}\)/, "url(##{new_id})" )
+          else
+            content = content.gsub(/id="#{id}"/, %Q{class="#{id}"})
+          end
         end
       end
 
-      config[path].sub(/[^\/]+?\./, key+'.')
+      content
     end
 
     def prep_svg(file, content)
@@ -379,12 +417,14 @@ module Esvg
              .gsub(/\s?fill="(#0{3,6}|black|rgba?\(0,0,0\))"/,'')      # Strip black fill
              .gsub(/style="([^"]*?)fill:(.+?);/m, 'fill="\2" style="\1')                   # Make fill a property instead of a style
              .gsub(/style="([^"]*?)fill-opacity:(.+?);/m, 'fill-opacity="\2" style="\1')   # Move fill-opacity a property instead of a style
+
+      sub_def_ids(file, content)
     end
 
     def optimize(svg)
       if config[:optimize] && svgo_path = find_node_module('svgo')
         path = write_svg(svg)
-        svg = `#{svgo_path} '#{path}' -o -`
+        svg = `#{svgo_path} --disable=removeUselessDefs '#{path}' -o -`
         FileUtils.rm(path)
       end
 
