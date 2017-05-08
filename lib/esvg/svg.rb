@@ -10,7 +10,6 @@ module Esvg
       namespace: 'icon',
       optimize: false,
       namespace_before: true,
-      font_size: '1em',
       verbose: false,
       format: 'js',
       throttle_read: 4,
@@ -19,8 +18,8 @@ module Esvg
     }
 
     CONFIG_RAILS = {
-      path: "app/assets/esvg",
-      js_path: "app/assets/javascripts/esvg.js",
+      path: "app/assets/svgs",
+      js_path: "app/assets/javascripts/_svgs.js",
     }
 
     def initialize(options={})
@@ -36,10 +35,10 @@ module Esvg
       @config ||= begin
         paths = [options[:config_file], 'config/esvg.yml', 'esvg.yml'].compact
 
-        config = CONFIG
+        config = CONFIG.dup
 
         if Esvg.rails? || options[:rails]
-          config.merge!(CONFIG_RAILS) 
+          config.merge!(CONFIG_RAILS)
         end
 
         if path = paths.select{ |p| File.exist?(p)}.first
@@ -56,12 +55,12 @@ module Esvg
           config[:output_path] = File.expand_path(config[:output_path])
         end
 
-        config[:js_path]        ||= File.join(config[:output_path], 'esvg.js')
-        config[:js_core_path]   ||= config[:js_path].sub(/[^\/]+?\./, '_esvg-core.')
+        config[:js_path]        ||= File.join(config[:output_path], 'svgs.js')
+        config[:js_core_path]   ||= config[:js_path].sub(/[^\/]+?\./, '_esvg-core.') unless config[:js_core_path] == false
         config[:html_path]      ||= File.join(config[:output_path], 'esvg.html')
         config.delete(:output_path)
         config[:aliases] = load_aliases(config[:alias])
-        config[:flatten] = config[:flatten].map { |dir| File.join(dir, '/') }.join('|')
+        config[:flatten] = [config[:flatten]].flatten.map { |dir| File.join(dir, '/') }.join('|')
 
         config
       end
@@ -164,6 +163,8 @@ module Esvg
 
     def flatten_path(path)
       root_path = File.expand_path(config[:path])
+
+      p "#{config[:flatten]}: -#{config[:path]}"
 
       path.sub("#{root_path}/",'').sub('.svg', '')
           .sub(Regexp.new(config[:flatten]), '')
