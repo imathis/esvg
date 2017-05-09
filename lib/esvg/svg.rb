@@ -19,7 +19,8 @@ module Esvg
 
     CONFIG_RAILS = {
       path: "app/assets/svgs",
-      js_path: "public/_svgs.js"
+      js_path: "public/_svgs.js",
+      js_build_dir: "public/assets"
     }
 
     def initialize(options={})
@@ -87,6 +88,14 @@ module Esvg
 
     def get_alias(name)
       config[:aliases][dasherize(name).to_sym] || name
+    end
+
+    def embed_script(key)
+      "<script>#{embed_js(key)}</script>"
+    end
+
+    def embed_js(key)
+      js(key || '.')
     end
 
     def embed(key)
@@ -298,6 +307,47 @@ module Esvg
       end
     end
 
+    def build
+      paths = []
+      svgs.each do |key, files|
+        unless key.start_with?('_')
+
+          content = js(key)
+          version = config[:js_build_version] || Digest::MD5.hexdigest(content)
+
+          key = File.basename(config[:js_path], '.*') if key == "."
+          dir = config[:js_build_dir] || File.dirname(config[:js_path])
+          path = File.join(dir, "#{key}-#{version}.js")
+
+          if !File.exist?(path)
+            write_file(path, content)
+            puts "Writing #{path}" 
+          end
+
+          if gz = compress(path)
+            puts "Writing #{gz}" 
+          end
+        end
+      end
+    end
+
+    def compress(file)
+      mtime = File.mtime(file)
+      gz_file = "#{file}.gz"
+      return if File.exist?(gz_file) && File.mtime(gz_file) >= mtime
+
+      File.open(gz_file, "wb") do |dest|
+        gz = Zlib::GzipWriter.new(dest, Zlib::BEST_COMPRESSION)
+        gz.mtime = mtime.to_i
+        IO.copy_stream(open(file), gz)
+        gz.close
+      end
+
+      File.utime(mtime, mtime, gz_file)
+
+      gz_file
+    end
+
     def write
       return if @files.empty?
       write_paths = case config[:format]
@@ -372,14 +422,14 @@ module Esvg
       File.join(dir, key+'.js')
     end
 
-    def write_path(path, key)
+    def write_path(type, key)
       # Write root svgs
-      return config[path] if key == "."
+      return config[type] if key == "."
 
-      if !key.start_with?('_') && path.to_s.start_with?('js')
+      if !key.start_with?('_') && type.to_s.start_with?('js')
         build_path(key)
       else
-        config[path].sub(/[^\/]+?\./, key+'.')
+        config[type].sub(/[^\/]+?\./, key+'.')
       end
     end
 
@@ -430,27 +480,35 @@ module Esvg
       svg
     end
 
-    def html(key)
-      if svgs[key].empty?
-        ''
-      else
-        symbols = []
+    def valid_keys(keys)
+      [keys].flatten.reject { |k| svgs[k].empty? }.uniq
+    end
+
+    def html(keys)
+      keys = valid_keys(keys)
+
+      return "" if keys.empty?
+      symbols = []
+
+      keys.each do |key|
         svgs[key].each do |name, data|
           symbols << prep_svg(name, data[:content])
         end
-
-        symbols = optimize(symbols.join).gsub(/class=/,'id=').gsub(/svg/,'symbol')
-
-        %Q{<svg id="esvg-#{key_id(key)}" version="1.1" style="height:0;position:absolute">#{symbols}</svg>}
       end
+
+      symbols = optimize(symbols.join).gsub(/class=/,'id=').gsub(/svg/,'symbol')
+
+      %Q{<svg id="esvg-#{key_id(keys)}" version="1.1" style="height:0;position:absolute">#{symbols}</svg>}
     end
 
-    def key_id(key)
-      (key == '.') ? 'symbols' : classname(key)
+    def key_id(keys)
+      keys.map do |key|
+        (key == '.') ? 'symbols' : classname(key) 
+      end.join('-')
     end
 
-    def svg_to_js(key)
-      html(key).gsub(/\n/,'').gsub("'"){"\\'"}
+    def svg_to_js(keys)
+      html(keys).gsub(/\n/,'').gsub("'"){"\\'"}
     end
 
     def js_core
@@ -496,11 +554,13 @@ if(typeof(module) != 'undefined') { module.exports = esvg }
     end
 
     def js(key)
+      keys = [key].flatten.reject { |k| svgs[k].empty? }
+      return "" if keys.empty?
       %Q{(function(){
 
   function embed() {
-    if (!document.querySelector('#esvg-#{key_id(key)}')) {
-      document.querySelector('body').insertAdjacentHTML('afterbegin', '#{svg_to_js(key)}')
+    if (!document.querySelector('#esvg-#{key_id(keys)}')) {
+      document.querySelector('body').insertAdjacentHTML('afterbegin', '#{svg_to_js(keys)}')
     }
   }
 

@@ -27,4 +27,13 @@ module Esvg
     defined?(Rails)
   end
 
+  def build(options={})
+    new(options).build
+  end
+
+  def precompile_assets
+    Rake::Task['assets:precompile'].enhance do
+      build
+    end
+  end
 end

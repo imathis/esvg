@@ -1,21 +1,17 @@
 module Esvg::Helpers
-  def svg_icons(options={})
-    svgs = Esvg.svgs
+  def esvg_embed(*keys)
+    esvg_icons.embed_script(keys).html_safe
+  end
 
-    if svgs.nil? || !options.empty?
-      svgs = Esvg.new(options)
-    end
+  def esvg_use(name, options={})
+    esvg_icons.use(name, options).html_safe
+  end
+
+  def esvg_icons
+    svgs = Esvg.svgs || Esvg.new()
 
     svgs.read_files if Rails.env.development?
 
     svgs
-  end
-
-  def embed(key)
-    Esvg.svgs.embed(key)
-  end
-
-  def svg_icon(name, options={})
-    svg_icons.use(name, options).html_safe
   end
 end
