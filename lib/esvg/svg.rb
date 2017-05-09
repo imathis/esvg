@@ -19,7 +19,7 @@ module Esvg
 
     CONFIG_RAILS = {
       path: "app/assets/svgs",
-      js_path: "app/assets/javascripts/_svgs.js",
+      js_path: "public/_svgs.js"
     }
 
     def initialize(options={})
@@ -89,12 +89,12 @@ module Esvg
       config[:aliases][dasherize(name).to_sym] || name
     end
 
-    def embed
+    def embed(key)
       return if files.empty?
       output = if config[:format] == "html"
-        html
+        html(key)
       elsif config[:format] == "js"
-        js
+        js(key)
       end
 
       if Esvg.rails?
@@ -164,8 +164,6 @@ module Esvg
     def flatten_path(path)
       root_path = File.expand_path(config[:path])
 
-      p "#{config[:flatten]}: -#{config[:path]}"
-
       path.sub("#{root_path}/",'').sub('.svg', '')
           .sub(Regexp.new(config[:flatten]), '')
     end
@@ -205,25 +203,25 @@ module Esvg
         end
       else
 
-        embed = use_icon(name)
-        embed = embed.sub(/class="(.+?)"/, 'class="\1 '+options[:class]+'"') if options[:class]
+        use = use_icon(name)
+        use = use.sub(/class="(.+?)"/, 'class="\1 '+options[:class]+'"') if options[:class]
 
         if options[:color]
           options[:style] ||= ''
           options[:style] += ";color:#{options[:color]};"
         end
 
-        embed = add_attribute(embed, 'style', options[:style], ';')
-        embed = add_attribute(embed, 'fill', options[:fill])
-        embed = add_attribute(embed, 'height', options[:height])
-        embed = add_attribute(embed, 'width', options[:width])
+        use = add_attribute(use, 'style', options[:style], ';')
+        use = add_attribute(use, 'fill', options[:fill])
+        use = add_attribute(use, 'height', options[:height])
+        use = add_attribute(use, 'width', options[:width])
 
-        embed = embed.sub(/><\/svg/, ">#{title(options)}#{desc(options)}</svg")
+        use = use.sub(/><\/svg/, ">#{title(options)}#{desc(options)}</svg")
 
         if Esvg.rails?
-          embed.html_safe
+          use.html_safe
         else
-          embed
+          use
         end
       end
     end

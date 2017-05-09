@@ -11,6 +11,10 @@ module Esvg::Helpers
     svgs
   end
 
+  def embed(key)
+    Esvg.svgs.embed(key)
+  end
+
   def svg_icon(name, options={})
     svg_icons.use(name, options).html_safe
   end

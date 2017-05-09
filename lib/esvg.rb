@@ -19,8 +19,8 @@ module Esvg
     @svgs
   end
 
-  def embed
-    new.embed
+  def embed(key)
+    new.embed(key)
   end
 
   def rails?
