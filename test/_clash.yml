@@ -8,3 +8,12 @@
   title: "Test USE icon with alias"
   before: ruby use_icon.rb
   compare: expected/use build/use
+- 
+  title: "Test Optimized JS"
+  before: ruby embed_svgs.rb
+  compare: expected/embed build/embed
+- 
+  title: "Test Optimized JS"
+  before: esvg svg_icons --config _optimize.yml
+  compare: 
+    - expected/optimize build/optimize

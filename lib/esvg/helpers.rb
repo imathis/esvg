@@ -3,7 +3,7 @@ module Esvg::Helpers
     if Rails.env.production?
       esvg_icons.embed_script(keys).html_safe
     else
-      esvg_icons.build_paths.each do |path|
+      esvg_icons.build_paths(keys).each do |path|
         javascript_include_tag(path)
       end.join("\n")
     end

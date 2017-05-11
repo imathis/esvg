@@ -10,8 +10,8 @@ module Esvg
       filename: 'svgs',
       base_class: 'svg-graphic',
       namespace: 'svg',
-      optimize: false,
       namespace_before: true,
+      optimize: false,
       compress: false,
       throttle_read: 4,
       flatten: [],
@@ -28,10 +28,12 @@ module Esvg
     def initialize(options={})
       config(options)
 
+      @modules = {}
       @last_read = nil
       @svgs = {}
       @svg_groups = {}
       @svg_symbols = {}
+      @last_modified = {}
 
       read_files
     end
@@ -96,16 +98,22 @@ module Esvg
           svgs[key] = process_file(path, mtime, key)
         end
 
-        (svg_groups[dkey] ||= []).push key
+        (svg_groups[dkey]    ||= []).push key
+        (@last_modified[dkey] ||= []).push mtime
       end
 
       svg_groups.each do |key, files|
         symbols = files.map { |file| svgs[file][:content] }.join
 
-        svg_symbols[key] = {
-          symbols: optimize(symbols).gsub(/class=/,'id=').gsub(/svg/,'symbol'),
-          version: config[:version] || Digest::MD5.hexdigest(symbols)
-        }
+        last_change = @last_modified[key].sort.last
+
+        if svg_symbols[key].nil? || svg_symbols[key][:last_modified] != last_change
+          svg_symbols[key] = {
+            last_modified: last_change,
+            symbols: optimize(symbols).gsub(/class=/,'id=').gsub(/svg/,'symbol'),
+            version: config[:version] || Digest::MD5.hexdigest(symbols)
+          }
+        end
       end
 
       # Remove deleted files from svg cache
@@ -115,17 +123,18 @@ module Esvg
       end
     end
 
-    def embed_script(key)
-      "<script>#{js(key)}</script>"
+    def embed_script(key=nil)
+      script = js(key)
+      "<script>#{script}</script>" if script
     end
 
-    def build_paths(keys)
-      keys = valid_keys(keys)
-
-      keys.map do |k|
-        "#{k}-#{svg_symbols[key][:version]}.js"
-      end
-
+    def build_paths(keys=nil)
+      valid_keys(keys).map do |k|
+        k = File.basename(write_path(k))
+        if !k.start_with?('_')
+          k
+        end
+      end.compact
     end
 
     def process_file(file, mtime, name)
@@ -283,7 +292,7 @@ module Esvg
 
     def js(key)
       keys = valid_keys(key)
-      return "" if keys.empty?
+      return if keys.empty?
 
       embed_symbols = symbols(keys).gsub(/\n/,'').gsub("'"){"\\'"}
 
@@ -432,9 +441,11 @@ if(typeof(module) != 'undefined') { module.exports = esvg }
     end
 
     def optimize(svg)
+
       if config[:optimize] && svgo_path = find_node_module('svgo')
         path = write_svg(svg)
-        svg = `#{svgo_path} --disable=removeUselessDefs '#{path}' -o -`
+        command = "#{svgo_path} --disable=removeUselessDefs '#{path}' -o -"
+        svg = `#{command}`
         FileUtils.rm(path)
       end
 
@@ -485,14 +496,17 @@ if(typeof(module) != 'undefined') { module.exports = esvg }
     # Returns path to binary if installed
     def find_node_module(cmd)
       require 'open3'
+      @modules[cmd] ||= begin
 
-      local = "$(npm bin)/#{cmd}"
-      global = "$(npm -g bin)/#{cmd}"
-      
-      if !Open3.capture3(local)[1].empty?
-        local
-      elsif !Open3.capture3(global)[1].empty?
-        global
+        local = "$(npm bin)/#{cmd}"
+        global = "$(npm -g bin)/#{cmd}"
+        
+        if Open3.capture3(local)[2].success?
+          local
+        elsif Open3.capture3(global)[2].success?
+          global
+        end
+
       end
     end
 
@@ -507,7 +521,8 @@ if(typeof(module) != 'undefined') { module.exports = esvg }
       if keys.nil?
         svg_groups.keys
       else
-        [keys].flatten.reject { |k| svg_groups[k].empty? }.uniq
+        keys = [keys].flatten.map { |k| dasherize k }
+        svg_groups.keys.select { |k| keys.include? dasherize(k) }
       end
     end
 
