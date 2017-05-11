@@ -33,7 +33,7 @@ module Esvg
 
   def precompile_assets
     Rake::Task['assets:precompile'].enhance do
-      build
+      build(compress: true)
     end
   end
 end
