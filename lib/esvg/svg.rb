@@ -488,9 +488,9 @@ if(typeof(module) != 'undefined') { module.exports = esvg }
       svg.gsub(/<svg.+?>/).with_index do |match, index|
         %Q{<symbol #{attributes(attr[index])}>}     # Remove clutter from svg declaration
       end
-        .gsub(/<\/svg/,'<symbol')
-        .gsub(/class=/,'id=')
-        .gsub(/style=""/,'')
+        .gsub(/<\/svg/,'<symbol') # Replace svgs with symbols
+        .gsub(/class=/,'id=')     # Replace classes with ids (classes are generated here)
+        .gsub(/\w+=""/,'')      # Remove empty attributes
     end
 
     def compress(file)
