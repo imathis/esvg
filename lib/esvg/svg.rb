@@ -54,6 +54,8 @@ module Esvg
 
         config.merge!(options)
 
+        config[:filename] = File.basename(config[:filename], '.*')
+
         config[:pwd]      = File.expand_path Dir.pwd
         config[:source]   = File.expand_path config[:source] || Dir.pwd
         config[:build]    = File.expand_path config[:build]  || Dir.pwd
@@ -364,8 +366,10 @@ if(typeof(module) != 'undefined') { module.exports = esvg }
     def dir_key(path)
       dir = File.dirname(flatten_path(path))
 
+      p [path, dir]
+
       # Flattened paths which should be treated as assets will use '_' as their dir key
-      if dir == '.' && sub_path(path).start_with?('_')
+      if dir == '.' && ( sub_path(path).start_with?('_') || config[:filename].start_with?('_') )
         '_'
       else
         dir
@@ -387,7 +391,7 @@ if(typeof(module) != 'undefined') { module.exports = esvg }
     def write_path(key)
 
       name = if key == '_'
-        "_#{config[:filename]}"
+        "_#{config[:filename]}".sub('__', '_')
       elsif key == '.'
         config[:filename]
       else
@@ -395,7 +399,7 @@ if(typeof(module) != 'undefined') { module.exports = esvg }
       end
 
       # Is it an asset, or a build file
-      if key.start_with?('_')
+      if name.start_with?('_')
         File.join config[:assets], "#{name}.js"
       else
         File.join config[:build], "#{name}-#{version(key)}.js"

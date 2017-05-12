@@ -5,6 +5,11 @@
     - expected/public build/public
     - expected/assets build/assets
 - 
+  title: "Test JS"
+  before: esvg svg_icons --config _assets.yml
+  compare: 
+    - expected/test-assets build/test-assets
+- 
   title: "Test USE icon with alias"
   before: ruby use_icon.rb
   compare: expected/use build/use
