@@ -110,12 +110,13 @@ module Esvg
 
         if data[:last_modified] != last_change
 
-          symbols = data[:files].map { |f| svgs[f][:content] }.join
+          symbols    = data[:files].map { |f| svgs[f][:content] }.join
+          attributes = data[:files].map { |f| svgs[f][:attr] }
 
           svg_symbols[key].merge!({
             name: key,
             last_modified: last_change,
-            symbols: optimize(symbols).gsub(/class=/,'id=').gsub(/svg/,'symbol'),
+            symbols: optimize(symbols, attributes),
             version: config[:version] || Digest::MD5.hexdigest(symbols),
             asset: File.basename(key).start_with?('_')
           })
@@ -161,9 +162,8 @@ module Esvg
         name: name,
         use: %Q{<use xlink:href="##{classname}"/>},
         last_modified: mtime,
-        attr: { classname: classname }.merge(dimensions(content))
+        attr: { class: classname }.merge(dimensions(content))
       }
-
       # Add attributes
       svg[:content] = prep_svg(content, svg[:attr])
 
@@ -196,7 +196,7 @@ module Esvg
           fill:   options[:fill],
           style:  options[:style],
           viewbox: svg[:attr][:viewbox],
-          classname: [config[:base_class], svg[:attr][:classname], options[:class]].compact.join(' ')
+          classname: [config[:base_class], svg[:attr][:class], options[:class]].compact.join(' ')
         }
 
         # If user doesn't pass a size or set scale: true
@@ -299,11 +299,11 @@ module Esvg
 
       files.each do |file|
         write_file(file[:path], js(file[:name]))
-        puts "Writing #{file[:path]}"
+        puts "Writing #{file[:path]}" if config[:print]
         paths << file[:path]
 
         if !file[:asset] && gz = compress(file[:path])
-          puts "Writing #{gz}"
+          puts "Writing #{gz}" if config[:cli]
           paths << gz
         end
       end
@@ -436,7 +436,6 @@ if(typeof(module) != 'undefined') { module.exports = esvg }
 
     def prep_svg(content, attr)
       content = content.gsub(/<?.+\?>/,'').gsub(/<!.+?>/,'')  # Get rid of doctypes and comments
-         .gsub(/<svg.+?>/, %Q{<svg #{attributes(attr)}>})     # Remove clutter from svg declaration
          .gsub(/\n/, '')                                      # Remove endlines
          .gsub(/\s{2,}/, ' ')                                 # Remove whitespace
          .gsub(/>\s+</, '><')                                 # Remove whitespace between tags
@@ -444,7 +443,7 @@ if(typeof(module) != 'undefined') { module.exports = esvg }
          .gsub(/style="([^"]*?)fill:(.+?);/m, 'fill="\2" style="\1')                   # Make fill a property instead of a style
          .gsub(/style="([^"]*?)fill-opacity:(.+?);/m, 'fill-opacity="\2" style="\1')   # Move fill-opacity a property instead of a style
 
-      sub_def_ids(content, attr[:classname])
+      sub_def_ids(content, attr[:class])
     end
 
     # Scans <def> blocks for IDs
@@ -459,7 +458,7 @@ if(typeof(module) != 'undefined') { module.exports = esvg }
         defs.scan(/id="(.+?)"/).flatten.uniq.each_with_index do |id, index|
 
           if content.match(/url\(##{id}\)/)
-            new_id = "#{classname}-ref#{index}"
+            new_id = "#{classname}-def#{index}"
 
             content = content.gsub(/id="#{id}"/, %Q{class="#{new_id}"})
                              .gsub(/url\(##{id}\)/, "url(##{new_id})" )
@@ -472,22 +471,35 @@ if(typeof(module) != 'undefined') { module.exports = esvg }
       content
     end
 
-    def optimize(svg)
+    def optimize(svg, attributes)
 
       if config[:optimize] && svgo_path = find_node_module('svgo')
         path = write_svg(svg)
         command = "#{svgo_path} --disable=removeUselessDefs '#{path}' -o -"
         svg = `#{command}`
         FileUtils.rm(path)
+
       end
 
-      svg
+      id_symbols(svg, attributes)
+    end
+
+    def id_symbols(svg, attr)
+      svg.gsub(/<svg.+?>/).with_index do |match, index|
+        %Q{<symbol #{attributes(attr[index])}>}     # Remove clutter from svg declaration
+      end
+        .gsub(/<\/svg/,'<symbol')
+        .gsub(/class=/,'id=')
+        .gsub(/style=""/,'')
     end
 
     def compress(file)
+      return if !config[:compress]
+
       mtime = File.mtime(file)
       gz_file = "#{file}.gz"
-      return if !config[:compress] || (File.exist?(gz_file) && File.mtime(gz_file) >= mtime)
+
+      return if (File.exist?(gz_file) && File.mtime(gz_file) >= mtime)
 
       File.open(gz_file, "wb") do |dest|
         gz = ::Zlib::GzipWriter.new(dest, Zlib::BEST_COMPRESSION)
@@ -580,7 +592,5 @@ if(typeof(module) != 'undefined') { module.exports = esvg }
     def get_alias(name)
       config[:aliases][dasherize(name).to_sym] || name
     end
-
-
   end
 end
