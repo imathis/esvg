@@ -133,8 +133,11 @@ module Esvg
     end
 
     def embed_script(key=nil)
-      script = js(key)
-      "<script>#{script}</script>" if script
+      if script = js(key)
+        "<script>#{script}</script>"
+      else
+        ''
+      end
     end
 
     def build_paths(keys=nil)
@@ -171,20 +174,7 @@ module Esvg
     end
 
     def use(file, options={})
-      name = get_alias dasherize(file)
-
-      if !exist?(name)
-        if fallback = options.delete(:fallback)
-          use(fallback, options)
-        else
-          if Esvg.rails? && Rails.env.production?
-            return ''
-          else
-            raise "no svg named '#{get_alias(file)}' exists at #{config[:source]}"
-          end
-        end
-      else
-
+      if name = exist?(file, options[:fallback])
         svg = svgs[name]
 
         if options[:color]
@@ -219,6 +209,12 @@ module Esvg
         else
           use
         end
+      else
+        if Esvg.rails? && Rails.env.production?
+          return ''
+        else
+          raise "no svg named '#{get_alias(file)}' exists at #{config[:source]}"
+        end
       end
     end
 
@@ -243,9 +239,15 @@ module Esvg
       att.join(' ')
     end
 
-    def exist?(name)
-      name = get_alias(name)
-      !svgs[name].nil?
+    def exist?(name, fallback=nil)
+      name = get_alias dasherize(name)
+
+      if svgs[name].nil?
+        exist?(fallback) if fallback
+      else
+        name
+      end
+
     end
 
     alias_method :exists?, :exist?
@@ -323,9 +325,7 @@ module Esvg
       keys = valid_keys(key)
       return if keys.empty?
 
-      embed_symbols = symbols(keys).gsub(/\n/,'').gsub("'"){"\\'"}
-
-      script key_id(keys), embed_symbols
+      script key_id(keys), symbols(keys).gsub('/n','').gsub("'"){"\\'"}
     end
 
     def script(id, symbols)
@@ -488,7 +488,7 @@ if(typeof(module) != 'undefined') { module.exports = esvg }
       svg.gsub(/<svg.+?>/).with_index do |match, index|
         %Q{<symbol #{attributes(attr[index])}>}     # Remove clutter from svg declaration
       end
-        .gsub(/<\/svg/,'<symbol') # Replace svgs with symbols
+        .gsub(/<\/svg/,'</symbol') # Replace svgs with symbols
         .gsub(/class=/,'id=')     # Replace classes with ids (classes are generated here)
         .gsub(/\w+=""/,'')      # Remove empty attributes
     end
@@ -562,7 +562,7 @@ if(typeof(module) != 'undefined') { module.exports = esvg }
 
     # Return non-empty key names for groups of svgs
     def valid_keys(keys)
-      if keys.nil?
+      if keys.nil? || keys.empty?
         svg_symbols.keys
       else
         keys = [keys].flatten.map { |k| dasherize k }

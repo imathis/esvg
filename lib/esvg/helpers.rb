@@ -1,16 +1,17 @@
 module Esvg::Helpers
+
   def embed_svgs(*keys)
     if Rails.env.production?
-      esvg_icons.embed_script(keys).html_safe
-    else
-      esvg_icons.build_paths(keys).each do |path|
+      esvg_files.build_paths(keys).each do |path|
         javascript_include_tag(path)
       end.join("\n")
+    else
+      esvg_files.embed_script(keys).html_safe
     end
   end
 
-  def use_svgs(name, options={})
-    esvg_icons.use(name, options).html_safe
+  def use_svg(name, options={})
+    esvg_files.use(name, options).html_safe
   end
 
   def esvg_files
