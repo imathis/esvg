@@ -4,7 +4,7 @@ require 'zlib'
 
 module Esvg
   class SVG
-    attr_accessor :svgs, :last_read, :svg_groups, :svg_symbols
+    attr_accessor :svgs, :last_read, :svg_symbols
 
     CONFIG = {
       filename: 'svgs',
@@ -31,7 +31,6 @@ module Esvg
       @modules = {}
       @last_read = nil
       @svgs = {}
-      @svg_groups = {}
       @svg_symbols = {}
       @last_modified = {}
 
@@ -100,21 +99,28 @@ module Esvg
           svgs[key] = process_file(path, mtime, key)
         end
 
-        (svg_groups[dkey]    ||= []).push key
-        (@last_modified[dkey] ||= []).push mtime
+        (svg_symbols[dkey]         ||= {})
+        (svg_symbols[dkey][:files] ||= []) << key
+        (@last_modified[dkey]      ||= []) << mtime
       end
 
-      svg_groups.each do |key, files|
-        symbols = files.map { |file| svgs[file][:content] }.join
+      svg_symbols.each do |key, data|
 
         last_change = @last_modified[key].sort.last
 
-        if svg_symbols[key].nil? || svg_symbols[key][:last_modified] != last_change
-          svg_symbols[key] = {
+        if data[:last_modified] != last_change
+
+          symbols = data[:files].map { |f| svgs[f][:content] }.join
+
+          svg_symbols[key].merge!({
+            name: key,
             last_modified: last_change,
             symbols: optimize(symbols).gsub(/class=/,'id=').gsub(/svg/,'symbol'),
-            version: config[:version] || Digest::MD5.hexdigest(symbols)
-          }
+            version: config[:version] || Digest::MD5.hexdigest(symbols),
+            asset: File.basename(key).start_with?('_')
+          })
+
+          svg_symbols[key][:path] = write_path(key)
         end
       end
 
@@ -131,12 +137,19 @@ module Esvg
     end
 
     def build_paths(keys=nil)
-      valid_keys(keys).map do |k|
-        k = File.basename(write_path(k))
-        if !k.start_with?('_')
-          k
-        end
-      end.compact
+      build_files(keys).map { |s| File.basename(s[:path]) }
+    end
+
+    def build_files(keys=nil)
+      valid_keys(keys).reject do |k|
+        svg_symbols[k][:asset]
+      end.map { |k| svg_symbols[k] }
+    end
+
+    def asset_files(keys=nil)
+      valid_keys(keys).select do |k|
+        svg_symbols[k][:asset]
+      end.map { |k| svg_symbols[k] }
     end
 
     def process_file(file, mtime, name)
@@ -269,18 +282,26 @@ module Esvg
       svg_symbols[key][:version]
     end
 
+    def write_asset_files(keys=nil)
+      write_files asset_files(keys)
+    end
+
+    def write_build_files
+      write_files build_files(keys)
+    end
+
     def build
-      paths = []
-      svg_groups.keys.each do |key|
-        path = write_path(key)
+      write_files svg_symbols.values
+    end
 
-        write_file(path, js(key))
-        puts "Writing #{path}"
+    def write_files(files)
+      files.each do |file|
+        write_file(file[:path], js(file[:name]))
+        puts "Writing #{file[:path]}"
 
-        if gz = compress(path)
+        if !file[:asset] && gz = compress(file[:path])
           puts "Writing #{gz}"
         end
-
       end
     end
 
@@ -298,11 +319,15 @@ module Esvg
 
       embed_symbols = symbols(keys).gsub(/\n/,'').gsub("'"){"\\'"}
 
+      script key_id(keys), embed_symbols
+    end
+
+    def script(id, symbols)
       %Q{(function(){
 
   function embed() {
-    if (!document.querySelector('#esvg-#{key_id(keys)}')) {
-      document.querySelector('body').insertAdjacentHTML('afterbegin', '#{embed_symbols}')
+    if (!document.querySelector('#esvg-#{id}')) {
+      document.querySelector('body').insertAdjacentHTML('afterbegin', '#{symbols}')
     }
   }
 
@@ -366,8 +391,6 @@ if(typeof(module) != 'undefined') { module.exports = esvg }
     def dir_key(path)
       dir = File.dirname(flatten_path(path))
 
-      p [path, dir]
-
       # Flattened paths which should be treated as assets will use '_' as their dir key
       if dir == '.' && ( sub_path(path).start_with?('_') || config[:filename].start_with?('_') )
         '_'
@@ -389,10 +412,9 @@ if(typeof(module) != 'undefined') { module.exports = esvg }
     end
 
     def write_path(key)
-
-      name = if key == '_'
-        "_#{config[:filename]}".sub('__', '_')
-      elsif key == '.'
+      name = if key == '_'  # Root level asset file
+        "_#{config[:filename]}".sub(/_+/, '_')
+      elsif key == '.'      # Root level build file
         config[:filename]
       else
         "#{key}"
@@ -407,14 +429,14 @@ if(typeof(module) != 'undefined') { module.exports = esvg }
     end
 
     def prep_svg(content, attr)
-      content = content.gsub(/<?.+\?>/,'').gsub(/<!.+?>/,'') # get rid of doctypes and comments
-             .gsub(/<svg.+?>/, %Q{<svg #{attributes(attr)}>})  # Remove clutter from svg declaration
-             .gsub(/\n/, '')                       # Remove endlines
-             .gsub(/\s{2,}/, ' ')                  # Remove whitespace
-             .gsub(/>\s+</, '><')                  # Remove whitespace between tags
-             .gsub(/\s?fill="(#0{3,6}|black|rgba?\(0,0,0\))"/,'')      # Strip black fill
-             .gsub(/style="([^"]*?)fill:(.+?);/m, 'fill="\2" style="\1')                   # Make fill a property instead of a style
-             .gsub(/style="([^"]*?)fill-opacity:(.+?);/m, 'fill-opacity="\2" style="\1')   # Move fill-opacity a property instead of a style
+      content = content.gsub(/<?.+\?>/,'').gsub(/<!.+?>/,'')  # Get rid of doctypes and comments
+         .gsub(/<svg.+?>/, %Q{<svg #{attributes(attr)}>})     # Remove clutter from svg declaration
+         .gsub(/\n/, '')                                      # Remove endlines
+         .gsub(/\s{2,}/, ' ')                                 # Remove whitespace
+         .gsub(/>\s+</, '><')                                 # Remove whitespace between tags
+         .gsub(/\s?fill="(#0{3,6}|black|rgba?\(0,0,0\))"/,'') # Strip black fill
+         .gsub(/style="([^"]*?)fill:(.+?);/m, 'fill="\2" style="\1')                   # Make fill a property instead of a style
+         .gsub(/style="([^"]*?)fill-opacity:(.+?);/m, 'fill-opacity="\2" style="\1')   # Move fill-opacity a property instead of a style
 
       sub_def_ids(content, attr[:classname])
     end
@@ -504,7 +526,7 @@ if(typeof(module) != 'undefined') { module.exports = esvg }
 
         local = "$(npm bin)/#{cmd}"
         global = "$(npm -g bin)/#{cmd}"
-        
+
         if Open3.capture3(local)[2].success?
           local
         elsif Open3.capture3(global)[2].success?
@@ -523,10 +545,10 @@ if(typeof(module) != 'undefined') { module.exports = esvg }
     # Return non-empty key names for groups of svgs
     def valid_keys(keys)
       if keys.nil?
-        svg_groups.keys
+        svg_symbols.keys
       else
         keys = [keys].flatten.map { |k| dasherize k }
-        svg_groups.keys.select { |k| keys.include? dasherize(k) }
+        svg_symbols.keys.select { |k| keys.include? dasherize(k) }
       end
     end
 
