@@ -284,14 +284,6 @@ module Esvg
       svg_symbols[key][:version]
     end
 
-    def write_asset_files(keys=nil)
-      write_files asset_files(keys)
-    end
-
-    def write_build_files
-      write_files build_files(keys)
-    end
-
     def build
       write_files svg_symbols.values
     end
@@ -316,7 +308,7 @@ module Esvg
     def symbols(keys)
       symbols = valid_keys(keys).map { |key|
         svg_symbols[key][:symbols]
-      }.join
+      }.join.gsub(/\n/,'')
 
       %Q{<svg id="esvg-#{key_id(keys)}" version="1.1" style="height:0;position:absolute">#{symbols}</svg>}
     end
