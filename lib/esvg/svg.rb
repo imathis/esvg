@@ -295,14 +295,20 @@ module Esvg
     end
 
     def write_files(files)
+      paths = []
+
       files.each do |file|
         write_file(file[:path], js(file[:name]))
         puts "Writing #{file[:path]}"
+        paths << file[:path]
 
         if !file[:asset] && gz = compress(file[:path])
           puts "Writing #{gz}"
+          paths << gz
         end
       end
+
+      paths
     end
 
     def symbols(keys)
