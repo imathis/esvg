@@ -31,10 +31,10 @@ module Esvg
     new(options).build
   end
 
-  if rails?
-    def precompile_assets
+  def precompile_assets
+    if rails? && defined?(Rake)
       ::Rake::Task['assets:precompile'].enhance do
-        build(compress: true)
+        build(compress: true, print: true)
       end
     end
   end

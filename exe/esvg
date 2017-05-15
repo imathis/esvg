@@ -38,6 +38,6 @@ else
     options[:source] = path
   end
 
-  options[:cli] = true
+  options[:print] = true
   esvg = Esvg::SVG.new(options).build
 end
