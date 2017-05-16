@@ -8,7 +8,7 @@ module Esvg
 
     CONFIG = {
       filename: 'svgs',
-      base_class: 'svg-graphic',
+      class: 'svg-symbol',
       namespace: 'svg',
       namespace_before: true,
       optimize: false,
@@ -224,7 +224,7 @@ module Esvg
           fill:   options[:fill],
           style:  options[:style],
           viewbox: svg[:attr][:viewbox],
-          classname: [config[:base_class], svg[:attr][:class], options[:class]].compact.join(' ')
+          classname: [config[:class], svg[:attr][:class], options[:class]].compact.join(' ')
         }
 
         # If user doesn't pass a size or set scale: true
@@ -389,7 +389,7 @@ module Esvg
     var element = document.querySelector('#'+svgName)
 
     if (element) {
-      return '<svg class="#{config[:base_class]} '+svgName+' '+(classnames || '')+'" '+this.dimensions(element)+'><use xlink:href="#'+svgName+'"/></svg>'
+      return '<svg class="#{config[:class]} '+svgName+' '+(classnames || '')+'" '+this.dimensions(element)+'><use xlink:href="#'+svgName+'"/></svg>'
     } else {
       console.error('File not found: "'+name+'.svg" at #{log_path(File.join(config[:source],''))}/')
     }

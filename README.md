@@ -1,9 +1,9 @@
 # Esvg
 
-Easily embed optimized SVGs in JS or HTML. Use as a standalone tool or with Rails.
+Easly slip optimized, cached svgs into your workflow using standalone CLI or the simple Rails integration.
 
-1. Converts a directory full of SVGs into a single optimized SVG using symbols.
-2. Uses Javascript to inject SVGs into pages, so it's easily cacheable.
+1. Converts a directory full of SVGs into a an optimized SVG using symbols for each file.
+2. Build a Javascript file to inject SVGs into pages, so it's easily cacheable.
 3. Offers Rails application helpers for placing icons in your views.
 
 [![Gem Version](http://img.shields.io/gem/v/esvg.svg)](https://rubygems.org/gems/esvg)
@@ -28,63 +28,73 @@ Or install it yourself as:
 
 ## Usage: Rails
 
-First, add SVG files to your `app/assets/esvg/` directory.
+Add SVG files to your `app/assets/svgs/` directory.
+
+for example:
+
+```
+app/assets/svgs
+ - logo.svg
+ - share.svg
+ - thumbs-up.svg
+```
 
 ### Inject SVG symbols
 
-Then create an `esvg.js.erb` in your `app/assets/javascripts/` and add the following:
+Add this to a page or layout where SVGs should be available
 
 ```
-<%= Esvg.embed %>
+<%= embed_svgs %>
 ```
 
-Finally add the following to your `application.js`
+**During development:**
+
+This will embed a `<script>` which will place svg symbols at the top of your site's `<body>` as soon as the DOM is ready, and after any Turbolinks page load events.
+
+**In Production:**
+
+The `embed_svgs` view helper will write a `javascript_include_tag` to include the script (rather than embeding it in the page).
+When you run `rake assets:precompile` this script will be built to `public/assets/svgs-{fingerprint}.js` (and a gzipped version).
+
+This allows browsers to cache the javascript files and reduce the weight of downloading svgs for each page.
+
+### Placing an SVG
+
+To place an SVG, use the `use_svg` vew helper. This helper will embed an SVG `use` tag which will reference the appropriate symbol. Here's how it works.
 
 ```
-//= require esvg
-```
-
-This script will inject your SVG symbols at the top of your site's `<body>` as soon as the DOM is ready, and after any Turbolinks `page:change` event.
-
-### Place an icon
-
-To place an SVG icon, use the `svg_icon` helper. This helper will embed an SVG `use` tag which will reference the appropriate symbol. Here's how it works.
-
-```
-# Syntax: svg_icon name, [options]
+# Syntax: use_svg name, [options]
 
 # Standard example
-<%= svg_icon 'kitten' %>
+<%= use_svg 'logo' %>
 
 # Output:
-# <svg class="icon kitten-icon"><use xlink:href="#kitten-icon"/></svg>
+# <svg class="svg-symbol svg-logo"><use xlink:href="#svg-logo"/></svg>
 
 # Add custom classnames
-<%= svg_icon 'kitten', class: 'adorbs' %>
+<%= use_svg 'share', class: 'disabled' %>
 
 # Output: 
-# <svg class="icon kitten-icon adorbs"><use xlink:href="#kitten-icon"/></svg>
-
-# Provide fallback icon if an icon is missing
-<%= svg_icon 'missing', fallback: 'kitten' %>
-
-# Output: 
-# <svg class="icon kitten-icon"><use xlink:href="#kitten-icon"/></svg>
+# <svg class="svg-symbol svg-share disabled"><use xlink:href="#svg-share"/></svg>
 
 # Add custom styles
-<%= svg_icon 'kitten', style: 'color: #c0ffee' %>
+<%= use_svg 'logo', style: 'fill: #c0ffee' %>
 
 # Output: 
-# <svg class="icon kitten-icon" style="color: #coffee;"><use xlink:href="#kitten-icon"/></svg>
+# <svg class="svg-symbol svg-logo" style="fill: #coffee;"><use xlink:href="#svg-logo"/></svg>
 
 # Add title and desc tags for SVG accessibility.
-<%= svg_icon 'kitten', title: "Mr. Snuggles", desc: "A graphic of a cat snuggling a ball of yarn" %>
+<%= use_svg 'kitten', title: "Mr. Snuggles", desc: "A graphic of a cat snuggling a ball of yarn" %>
 
 # Output: 
 # <svg class="icon kitten-icon"><use xlink:href="#kitten-icon"/>
 #   <title>Mr. Snuggles</title>
 #   <desc>A graphic of a cat snuggling a ball of yarn</desc>
 # </svg>
+
+# Provide fallback icon if an icon is missing (great for when you are generating icon names from code)
+<%= use_svg 'missing', fallback: 'default' %>
+
 ```
 
 ## Usage: stand-alone CLI
@@ -94,10 +104,10 @@ To place an SVG icon, use the `svg_icon` helper. This helper will embed an SVG `
 $ esvg PATH [options]
 
 # Examples:
-$ esvg                          # Read icons from current directory, write js to ./esvg.js
-$ esvg icons                    # Read icons from 'icons' directory, write js to ./esvg.js
-$ esvg --output embedded        # Read icons from current directory, write js to embedded/esvg.js
-$ esvg -c --config foo.yml      # Read confguration from foo.yml (otherwise, defaults to esvg.yml, or config/esvg.yml)
+$ esvg                      # Read icons from current directory, write js to ./svgs.js
+$ esvg icons                # Read icons from 'icons' directory, write js to ./svgs.js
+$ esvg --output build       # Read icons from current directory, write js to build/svgs.js
+$ esvg -c --config foo.yml  # Read confguration from foo.yml (otherwise, defaults to esvg.yml, or config/esvg.yml)
 ```
 
 ## Configuration
@@ -105,13 +115,14 @@ $ esvg -c --config foo.yml      # Read confguration from foo.yml (otherwise, def
 If you're using esvg from the command line, configuration files are read from `./esvg.yml` or you can pass a path with the `--config` option to read the config file from elsewhere.
 
 ```
-path: .                     # Where to find SVG icons (Rails defaults to app/assets/esvg)
-output_path: .              # Where to write output files (CLI only)
-format: js                  # Format for output (js, html)
+source: .                   # Where to find SVG icons (Rails defaults to app/assets/esvg)
+build: .                    # Where to write build files
+assets: .                   # Where to write asset files (builds for directories beginning in _)
+tmp: .                      # Write temporary cache files (will write to #{dir}/.esvg-cache/
 
-base_class: svg-icon        # Select all icons with this base classname
-namespace: icon             # Namespace for symbol ids
-namespace_before: true      # Add namespace before, e.g. icon-kitten
+class: svg-symbol           # All svgs with `use_svg` will have this base classname
+namespace: svg              # Namespace for symbol ids, e.g 'svg-logo'
+namespace_before: true      # Add namespace before, e.g. 'svg-logo', false would be 'logo-svg'
 
 alias:                      # Add aliases for icon names
   comment: chat             # use "chat" to reference comment.svg
