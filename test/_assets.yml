@@ -1,5 +1,5 @@
-build: build
 version: 1.3.2
 filename: _svgs.js
-build: build/test-assets/
+build: build/test-assets
 assets: build/test-assets/assets
+temp: build/tmp

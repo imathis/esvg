@@ -5,3 +5,4 @@ flatten:
 version: 1.3.2
 build: build/public
 assets: build/assets
+temp: build/tmp

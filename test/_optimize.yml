@@ -5,4 +5,5 @@ flatten:
 version: 1.3.2
 build: build/optimize
 assets: build/optimize
+temp: build/tmp/
 optimize: true

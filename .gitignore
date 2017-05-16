@@ -10,4 +10,5 @@
 /test/build
 /test/optimized
 .DS_Store
+.esvg-cache
 node_modules

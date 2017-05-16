@@ -14,7 +14,7 @@
   before: ruby use_icon.rb
   compare: expected/use build/use
 - 
-  title: "Test Optimized JS"
+  title: "Test svg embed"
   before: ruby embed_svgs.rb
   compare: expected/embed build/embed
 - 

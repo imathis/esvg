@@ -1,7 +1,7 @@
 require 'esvg'
 require 'fileutils'
 
-svgs = Esvg.new({config_file: '_alias.yml', source: 'svg_icons'})
+svgs = Esvg.new({config_file: '_alias.yml', source: 'svg_icons', temp: 'build/tmp'})
 
 # Test standard svg icon usage
 use = svgs.svg_icon('comment-bubble')

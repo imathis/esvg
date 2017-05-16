@@ -22,7 +22,7 @@ module Esvg
       source: "app/assets/svgs",
       assets: "app/assets/javascripts",
       build: "public/assets",
-      tmp_path: "tmp"
+      temp: "tmp"
     }
 
     def initialize(options={})
@@ -54,9 +54,12 @@ module Esvg
         config[:filename] = File.basename(config[:filename], '.*')
 
         config[:pwd]      = File.expand_path Dir.pwd
-        config[:source]   = File.expand_path config[:source] || Dir.pwd
-        config[:build]    = File.expand_path config[:build]  || Dir.pwd
-        config[:assets]   = File.expand_path config[:assets] || Dir.pwd
+        config[:source]   = File.expand_path config[:source] || config[:pwd]
+        config[:build]    = File.expand_path config[:build]  || config[:pwd]
+        config[:assets]   = File.expand_path config[:assets] || config[:pwd]
+
+        config[:temp]     = config[:pwd] if config[:temp].nil?
+        config[:temp]     = File.expand_path File.join(config[:temp], '.esvg-cache')
 
         config[:aliases] = load_aliases(config[:alias])
         config[:flatten] = [config[:flatten]].flatten.map { |dir| File.join(dir, '/') }.join('|')
@@ -85,7 +88,11 @@ module Esvg
     end
 
     def find_files
-      files = Dir[File.join(config[:source], '**/*.svg')].uniq
+      files = Dir[File.join(config[:source], '**/*.svg')].uniq.sort
+
+      # Remove deleted files from svg cache
+      (svgs.keys - file_keys(files)).each { |f| svgs.delete(f) }
+
       dirs = {}
 
       files.each do |path|
@@ -107,17 +114,18 @@ module Esvg
         end
       end
 
-      # Remove deleted files from svg cache
-      (svgs.keys - files.map {|file| file_key(file) }).each do |f|
-        svgs.delete(f)
-      end
+      dirs = sort(dirs)
+
+      # Remove deleted directories from svg_symbols cache
+      (svg_symbols.keys - dirs.keys).each {|dir| svg_symbols.delete(dir) }
 
       dirs.each do |dir, data|
 
         # overwrite cache if
-        if svg_symbols[dir].nil? ||                                   # No cache for this dir yet
+        if svg_symbols[dir].nil?                                   || # No cache for this dir yet
           svg_symbols[dir][:last_modified] != data[:last_modified] || # New or updated file
-          svg_symbols[dir][:files].size != data[:files].size          # File deleted
+          svg_symbols[dir][:optimized] != optimize?                || # Cache is unoptimized
+          svg_symbols[dir][:files] != data[:files]                    # Changed files
 
           symbols    = data[:files].map { |f| svgs[f][:content] }.join
           attributes = data[:files].map { |f| svgs[f][:attr] }
@@ -125,16 +133,20 @@ module Esvg
           svg_symbols[dir] = data.merge({
             name: dir,
             symbols: optimize(symbols, attributes),
+            optimized: optimize?,
             version: config[:version] || Digest::MD5.hexdigest(symbols),
             asset: File.basename(dir).start_with?('_')
           })
 
+        end
+
+        svg_symbols.keys.each do |dir|
           svg_symbols[dir][:path] = write_path(dir)
         end
       end
       
-      # Remove deleted files from svg_symbols cache
-      (svg_symbols.keys - dirs.keys).each {|dir| svg_symbols.delete(dir) }
+      @svg_symbols = sort(@svg_symbols)
+      @svgs = sort(@svgs)
     end
 
     def read_cache
@@ -145,9 +157,17 @@ module Esvg
     def write_cache
       return if production?
 
-      write_tmp '.svgs', @svgs.to_yaml
-      write_tmp '.svg_symbols', @svg_symbols.to_yaml
+      write_tmp '.svgs', sort(@svgs).to_yaml
+      write_tmp '.svg_symbols', sort(@svg_symbols).to_yaml
 
+    end
+
+    def sort(hash)
+      sorted = {}
+      hash.sort.each do |h|
+        sorted[h.first] = h.last
+      end
+      sorted
     end
 
     def embed_script(key=nil)
@@ -429,6 +449,10 @@ if(typeof(module) != 'undefined') { module.exports = esvg }
       dasherize flatten_path(path).sub('.svg', '')
     end
 
+    def file_keys(paths)
+      paths.flatten.map { |p| file_key(p) }
+    end
+
     def write_path(key)
       name = if key == '_'  # Root level asset file
         "_#{config[:filename]}".sub(/_+/, '_')
@@ -483,11 +507,19 @@ if(typeof(module) != 'undefined') { module.exports = esvg }
       content
     end
 
-    def optimize(svg, attributes)
+    def optimize?
+      !!(config[:optimize] && svgo_cmd)
+    end
 
-      if config[:optimize] && svgo_path = find_node_module('svgo')
+    def svgo_cmd
+      find_node_module('svgo')
+    end
+
+
+    def optimize(svg, attributes)
+      if optimize?
         path = write_tmp '.svgo-tmp', svg
-        command = "#{svgo_path} --disable=removeUselessDefs '#{path}' -o -"
+        command = "#{svgo_cmd} --disable=removeUselessDefs '#{path}' -o -"
         svg = `#{command}`
         FileUtils.rm(path) if File.exist? path
       end
@@ -525,13 +557,14 @@ if(typeof(module) != 'undefined') { module.exports = esvg }
     end
 
     def write_tmp(name, content)
-      path = File.join((config[:tmp_path] || config[:build]), name)
+      path = File.join(config[:temp], name)
+      FileUtils.mkdir_p(File.dirname(path))
       write_file path, content
       path
     end
 
     def read_tmp(name)
-      path = File.join((config[:tmp_path] || config[:build]), name)
+      path = File.join(config[:temp], name)
       if File.exist? path
         File.read path
       else
@@ -560,8 +593,10 @@ if(typeof(module) != 'undefined') { module.exports = esvg }
     # Returns path to binary if installed
     def find_node_module(cmd)
       require 'open3'
-      @modules[cmd] ||= begin
 
+      return @modules[cmd] unless @modules[cmd].nil?
+
+      @modules[cmd] = begin
         local = "$(npm bin)/#{cmd}"
         global = "$(npm -g bin)/#{cmd}"
 
@@ -569,8 +604,9 @@ if(typeof(module) != 'undefined') { module.exports = esvg }
           local
         elsif Open3.capture3(global)[2].success?
           global
+        else
+          false
         end
-
       end
     end
 
