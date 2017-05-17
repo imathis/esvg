@@ -28,6 +28,8 @@ Or install it yourself as:
 
 ## Usage: Rails
 
+Add `Esvg.precompile_assets` to your `config/initializers/assets.rb` to add build with `rake assets:precomile`.
+
 Add SVG files to your `app/assets/svgs/` directory.
 
 for example:
