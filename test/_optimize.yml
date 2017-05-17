@@ -7,3 +7,4 @@ build: build/optimize
 assets: build/optimize
 temp: build/tmp/
 optimize: true
+core: false

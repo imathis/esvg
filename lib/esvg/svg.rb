@@ -10,6 +10,7 @@ module Esvg
       filename: 'svgs',
       class: 'svg-symbol',
       namespace: 'svg',
+      core: true,
       namespace_before: true,
       optimize: false,
       compress: false,
@@ -323,7 +324,15 @@ module Esvg
     end
 
     def build
-      write_files svg_symbols.values
+      paths = write_files svg_symbols.values
+
+      if config[:core]
+        path = File.join config[:assets], "_esvg.js"
+        write_file(path, js_core)
+        paths << path
+      end
+
+      paths
     end
 
     def write_files(files)
@@ -383,45 +392,78 @@ module Esvg
     end
 
     def js_core
-      %Q{var esvg = {
-  icon: function(name, classnames) {
-    var svgName = this.iconName(name)
-    var element = document.querySelector('#'+svgName)
+      %Q{(function(){
+  var names
 
-    if (element) {
-      return '<svg class="#{config[:class]} '+svgName+' '+(classnames || '')+'" '+this.dimensions(element)+'><use xlink:href="#'+svgName+'"/></svg>'
+  function attr( source, name ){
+    if (typeof source == 'object')
+      return name+'="'+source.getAttribute(name)+'" '
+    else
+      return name+'="'+source+'" ' }
+
+  function dasherize( input ) {
+    return input.replace(/[\\W,_]/g, '-').replace(/-{2,}/g, '-')
+  }
+
+  function svgName( name ) {
+    #{if config[:namespace_before]
+      %Q{return "#{config[:namespace]}-"+dasherize( name )}
+    else
+      %Q{return dasherize( name )+"-#{config[:namespace]}"}
+    end}
+  }
+
+  function use( name, options ) {
+    options = options || {}
+    var id = dasherize( svgName( name ) )
+    var symbol = svgs()[id]
+
+    if ( symbol ) {
+      var svg = document.createRange().createContextualFragment( '<svg><use xlink:href="#'+id+'"/></svg>' ).firstChild;
+      svg.setAttribute( 'class', '#{config[:class]} '+id+' '+( options.classname || '' ).trim() )
+      svg.setAttribute( 'viewBox', symbol.getAttribute( 'viewBox' ) )
+
+      if ( !( options.width || options.height || options.scale ) ) {
+
+        svg.setAttribute('width',  symbol.getAttribute('width'))
+        svg.setAttribute('height', symbol.getAttribute('height'))
+
+      } else {
+
+        if ( options.width )  svg.setAttribute( 'width',  options.width )
+        if ( options.height ) svg.setAttribute( 'height', options.height )
+      }
+
+      return svg
     } else {
-      console.error('File not found: "'+name+'.svg" at #{log_path(File.join(config[:source],''))}/')
-    }
-  },
-  iconName: function(name) {
-    var before = #{config[:namespace_before]}
-    if (before) {
-      return "#{config[:namespace]}-"+this.dasherize(name)
-    } else {
-      return name+"-#{config[:namespace]}"
-    }
-  },
-  dimensions: function(el) {
-    return 'viewBox="'+el.getAttribute('viewBox')+'" width="'+el.getAttribute('width')+'" height="'+el.getAttribute('height')+'"'
-  },
-  dasherize: function(input) {
-    return input.replace(/[\W,_]/g, '-').replace(/-{2,}/g, '-')
-  },
-  aliases: #{config[:aliases].to_json},
-  alias: function(name) {
-    var aliased = this.aliases[name]
-    if (typeof(aliased) != "undefined") {
-      return aliased
-    } else {
-      return name
+      console.error('Cannot find "'+name+'" svg symbol. Ensure that svg scripts are loaded')
     }
   }
-}
 
-// Work with module exports:
-if(typeof(module) != 'undefined') { module.exports = esvg }
-}
+  function svgs(){
+    if ( !names ) {
+      names = {}
+      for( var symbol of document.querySelectorAll( 'svg[id^=esvg] symbol' ) ) {
+        names[symbol.id] = symbol
+      }
+    }
+    return names
+  }
+
+  var esvg = {
+    svgs: svgs,
+    use: use
+  }
+
+  // Handle Turbolinks page change events
+  if ( window.Turbolinks ) {
+    document.addEventListener( "turbolinks:load", function( event ) { names = null; esvg.svgs() })
+  }
+
+  if( typeof( module ) != 'undefined' ) { module.exports = esvg }
+  else window.esvg = esvg
+
+})()}
     end
 
     private
