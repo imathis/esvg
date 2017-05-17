@@ -8,12 +8,8 @@ require 'esvg'
 options = {}
 
 OptionParser.new do |opts|
-  opts.on("-f", "--format TYPE", String, "Options: js, html (defaults to js)") do |format|
-    options[:format] = format
-  end
-
   opts.on("-o", "--output PATH", String, "Where should JS/HTML files be written, (default: current directory)") do |path|
-    options[:output_path] = path
+    options[:build] = path
   end
 
   opts.on("-c", "--config PATH", String, "Path to a config file (default: esvg.yml, config/esvg.yml)") do |path|
@@ -24,11 +20,11 @@ OptionParser.new do |opts|
     options[:rails] = true
   end
 
-  opts.on("-O", "--optimize", "Optimize svgs with svgo") do |svgo|
-    options[:optimize] = svgo
+  opts.on("-O", "--optimize", "Optimize svgs with svgo") do
+    options[:optimize] = true
   end
 
-  opts.on("-v", "--version", "Print version") do |version|
+  opts.on("-v", "--version", "Print version") do
     options[:version] = true
   end
 
@@ -39,9 +35,9 @@ if options[:version]
 else
 
   if path = ARGV.shift
-    options[:path] = path
+    options[:source] = path
   end
 
-  options[:cli] = true
-  esvg = Esvg::SVG.new(options).write
+  options[:print] = true
+  esvg = Esvg::SVG.new(options).build
 end

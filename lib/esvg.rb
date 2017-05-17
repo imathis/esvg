@@ -19,12 +19,23 @@ module Esvg
     @svgs
   end
 
-  def embed
-    new.embed
+  def embed(key)
+    new.embed(key)
   end
 
   def rails?
     defined?(Rails)
   end
 
+  def build(options={})
+    new(options).build
+  end
+
+  def precompile_assets
+    if rails? && defined?(Rake)
+      ::Rake::Task['assets:precompile'].enhance do
+        build(compress: true, print: true)
+      end
+    end
+  end
 end
