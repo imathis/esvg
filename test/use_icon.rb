@@ -7,7 +7,7 @@ svgs = Esvg.new({config_file: '_alias.yml', source: 'svg_icons', temp: 'build/tm
 use = svgs.svg_icon('comment-bubble')
 
 # Test passing properties to style attribute
-use_style = svgs.svg_icon('comment-bubble', style: 'display: none')
+use_style = svgs.svg_icon('comment-bubble', style: 'display: none', content: "<title>test</title>")
 use_scale = svgs.svg_icon('sub-folder/test', scale: true)
 use_width = svgs.svg_icon('sub-folder/test', width: '200px')
 

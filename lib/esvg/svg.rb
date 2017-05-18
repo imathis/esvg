@@ -133,7 +133,7 @@ module Esvg
 
           svg_symbols[dir] = data.merge({
             name: dir,
-            symbols: optimize(symbols, attributes),
+            symbols: symbols,
             optimized: optimize?,
             version: config[:version] || Digest::MD5.hexdigest(symbols),
             asset: File.basename(dir).start_with?('_')
@@ -197,14 +197,14 @@ module Esvg
 
     def process_file(file, mtime, name)
       content   = File.read(file)
-      classname = classname(name)
+      id        = id(name)
       size_attr = dimensions(content)
 
       svg = {
         name: name,
-        use: %Q{<use xlink:href="##{classname}"/>},
+        use: %Q{<use xlink:href="##{id}"/>},
         last_modified: mtime,
-        attr: { class: classname }.merge(dimensions(content))
+        attr: { id: id }.merge(size_attr)
       }
       # Add attributes
       svg[:content] = prep_svg(content, svg[:attr])
@@ -224,8 +224,8 @@ module Esvg
         attr = {
           fill:   options[:fill],
           style:  options[:style],
-          viewbox: svg[:attr][:viewbox],
-          classname: [config[:class], svg[:attr][:class], options[:class]].compact.join(' ')
+          viewBox: svg[:attr][:viewBox],
+          class: [config[:class], svg[:attr][:id], options[:class]].compact.join(' ')
         }
 
         # If user doesn't pass a size or set scale: true
@@ -241,7 +241,7 @@ module Esvg
           attr[:height] = options[:height]
         end
 
-        use = %Q{<svg #{attributes(attr)}>#{svg[:use]}#{title(options)}#{desc(options)}</svg>}
+        use = %Q{<svg #{attributes(attr)}>#{svg[:use]}#{title(options)}#{desc(options)}#{options[:content]||''}</svg>}
 
         if Esvg.rails?
           use.html_safe
@@ -261,13 +261,17 @@ module Esvg
 
     def dimensions(input)
       viewbox = input.scan(/<svg.+(viewBox=["'](.+?)["'])/).flatten.last
-      coords  = viewbox.split(' ')
+      if viewbox
+        coords  = viewbox.split(' ')
 
-      {
-        viewbox: viewbox,
-        width: coords[2].to_i - coords[0].to_i,
-        height: coords[3].to_i - coords[1].to_i
-      }
+        {
+          viewBox: viewbox,
+          width: coords[2].to_i - coords[0].to_i,
+          height: coords[3].to_i - coords[1].to_i
+        }
+      else
+        {}
+      end
     end
 
     def attributes(hash)
@@ -291,7 +295,8 @@ module Esvg
 
     alias_method :exists?, :exist?
 
-    def classname(name)
+    def id(name)
+      name = name_key(name)
       if config[:namespace_before]
         dasherize "#{config[:namespace]}-#{name}"
       else
@@ -339,15 +344,13 @@ module Esvg
       paths = []
 
       files.each do |file|
-        if file[:asset] || !File.exist?(file[:path])
-          write_file(file[:path], js(file[:name]))
-          puts "Writing #{file[:path]}" if config[:print]
-          paths << file[:path]
+        write_file(file[:path], js(file[:name]))
+        puts "Writing #{file[:path]}" if config[:print]
+        paths << file[:path]
 
-          if !file[:asset] && gz = compress(file[:path])
-            puts "Writing #{gz}" if config[:print]
-            paths << gz
-          end
+        if !file[:asset] && gz = compress(file[:path])
+          puts "Writing #{gz}" if config[:print]
+          paths << gz
         end
       end
 
@@ -495,19 +498,22 @@ module Esvg
       paths.flatten.map { |p| file_key(p) }
     end
 
-    def write_path(key)
-      name = if key == '_'  # Root level asset file
+    def name_key(key)
+      if key == '_'  # Root level asset file
         "_#{config[:filename]}".sub(/_+/, '_')
       elsif key == '.'      # Root level build file
         config[:filename]
       else
         "#{key}"
       end
+    end
 
-      # Is it an asset, or a build file
-      if name.start_with?('_')
+    def write_path(key)
+      name = name_key(key)
+
+      if name.start_with?('_') # Is it an asset?
         File.join config[:assets], "#{name}.js"
-      else
+      else # or a build file?
         File.join config[:build], "#{name}-#{version(key)}.js"
       end
     end
@@ -521,7 +527,14 @@ module Esvg
          .gsub(/style="([^"]*?)fill:(.+?);/m, 'fill="\2" style="\1')                   # Make fill a property instead of a style
          .gsub(/style="([^"]*?)fill-opacity:(.+?);/m, 'fill-opacity="\2" style="\1')   # Move fill-opacity a property instead of a style
 
-      sub_def_ids(content, attr[:class])
+      content = sub_def_ids content, attr[:id]
+      content = strip_attributes content
+      content = optimize(content) if optimize?
+      content = set_attributes content, attr
+      content.gsub(/<\/svg/,'</symbol')      # Replace svgs with symbols
+        .gsub(/class="def-/,'id="def-') # Replace <def> classes with ids (classes are generated in sub_def_ids)
+        .gsub(/\s{2,}/,'')                 # Remove extra spaces
+        .gsub(/\w+=""/,'')              # Remove empty attributes
     end
 
     # Scans <def> blocks for IDs
@@ -529,14 +542,14 @@ module Esvg
     # Only replace IDs if urls exist to avoid replacing defs
     # used in other svg files
     #
-    def sub_def_ids(content, classname)
+    def sub_def_ids(content, name)
       return content unless !!content.match(/<defs>/)
 
       content.scan(/<defs>.+<\/defs>/m).flatten.each do |defs|
         defs.scan(/id="(.+?)"/).flatten.uniq.each_with_index do |id, index|
 
           if content.match(/url\(##{id}\)/)
-            new_id = "#{classname}-def#{index}"
+            new_id = "def-#{name}-#{index}"
 
             content = content.gsub(/id="#{id}"/, %Q{class="#{new_id}"})
                              .gsub(/url\(##{id}\)/, "url(##{new_id})" )
@@ -549,6 +562,17 @@ module Esvg
       content
     end
 
+    def strip_attributes(svg)
+      reg = %w(xmlns xmlns:xlink xml:space version).map { |m| "#{m}=\".+?\"" }.join('|')
+
+      svg.gsub(Regexp.new(reg), '')
+    end
+
+    def set_attributes(svg, attr)
+      attr.keys.each { |key| svg.sub!(/ #{key}=".+?"/,'') }
+      svg.sub(/<svg/, "<symbol #{attributes(attr)}")
+    end
+
     def optimize?
       !!(config[:optimize] && svgo_cmd)
     end
@@ -558,24 +582,13 @@ module Esvg
     end
 
 
-    def optimize(svg, attributes)
-      if optimize?
-        path = write_tmp '.svgo-tmp', svg
-        command = "#{svgo_cmd} --disable=removeUselessDefs '#{path}' -o -"
-        svg = `#{command}`
-        FileUtils.rm(path) if File.exist? path
-      end
+    def optimize(svg)
+      path = write_tmp '.svgo-tmp', svg
+      command = "#{svgo_cmd} --disable=removeUselessDefs '#{path}' -o -"
+      svg = `#{command}`
+      FileUtils.rm(path) if File.exist? path
 
-      id_symbols(svg, attributes)
-    end
-
-    def id_symbols(svg, attr)
-      svg.gsub(/<svg.+?>/).with_index do |match, index|
-        %Q{<symbol #{attributes(attr[index])}>}     # Remove clutter from svg declaration
-      end
-        .gsub(/<\/svg/,'</symbol') # Replace svgs with symbols
-        .gsub(/class=/,'id=')     # Replace classes with ids (classes are generated here)
-        .gsub(/\w+=""/,'')      # Remove empty attributes
+      svg
     end
 
     def compress(file)
@@ -627,7 +640,7 @@ module Esvg
 
     def key_id(keys)
       keys.map do |key|
-        (key == '.') ? 'symbols' : classname(key)
+        (key == '.') ? 'symbols' : id(key)
       end.join('-')
     end
 
