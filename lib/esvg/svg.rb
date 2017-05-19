@@ -22,7 +22,7 @@ module Esvg
     CONFIG_RAILS = {
       source: "app/assets/svgs",
       assets: "app/assets/javascripts",
-      build: "public/assets",
+      build: "public/javascripts",
       temp: "tmp"
     }
 
@@ -77,7 +77,6 @@ module Esvg
       # Get a list of svg files and modification times
       #
       find_files
-      write_cache
 
       @last_read = Time.now.to_i
 
@@ -97,7 +96,6 @@ module Esvg
       dirs = {}
 
       files.each do |path|
-
         mtime = File.mtime(path).to_i
         key = file_key path
         dkey = dir_key path
@@ -125,23 +123,17 @@ module Esvg
         # overwrite cache if
         if svg_symbols[dir].nil?                                   || # No cache for this dir yet
           svg_symbols[dir][:last_modified] != data[:last_modified] || # New or updated file
-          svg_symbols[dir][:optimized] != optimize?                || # Cache is unoptimized
           svg_symbols[dir][:files] != data[:files]                    # Changed files
 
-          symbols    = data[:files].map { |f| svgs[f][:content] }.join
           attributes = data[:files].map { |f| svgs[f][:attr] }
+          mtimes = data[:files].map { |f| svgs[f][:last_modified] }.join
 
           svg_symbols[dir] = data.merge({
             name: dir,
-            symbols: symbols,
-            optimized: optimize?,
-            version: config[:version] || Digest::MD5.hexdigest(symbols),
-            asset: File.basename(dir).start_with?('_')
+            asset: File.basename(dir).start_with?('_'),
+            version: config[:version] || Digest::MD5.hexdigest(mtimes)
           })
 
-        end
-
-        svg_symbols.keys.each do |dir|
           svg_symbols[dir][:path] = write_path(dir)
         end
       end
@@ -200,16 +192,14 @@ module Esvg
       id        = id(name)
       size_attr = dimensions(content)
 
-      svg = {
+      {
         name: name,
         use: %Q{<use xlink:href="##{id}"/>},
         last_modified: mtime,
-        attr: { id: id }.merge(size_attr)
+        attr: { id: id }.merge(size_attr),
+        content: content,
+        optimized: false
       }
-      # Add attributes
-      svg[:content] = prep_svg(content, svg[:attr])
-
-      svg
     end
 
     def use(file, options={})
@@ -344,7 +334,9 @@ module Esvg
       paths = []
 
       files.each do |file|
-        write_file(file[:path], js(file[:name]))
+        content = js(file[:name])
+
+        write_file(file[:path], content)
         puts "Writing #{file[:path]}" if config[:print]
         paths << file[:path]
 
@@ -354,15 +346,24 @@ module Esvg
         end
       end
 
+      write_cache
+
       paths
     end
 
     def symbols(keys)
       symbols = valid_keys(keys).map { |key|
-        svg_symbols[key][:symbols]
+        # Build on demand
+        svg_symbols[key][:symbols] ||= build_symbols(svg_symbols[key][:files])
       }.join.gsub(/\n/,'')
 
       %Q{<svg id="esvg-#{key_id(keys)}" version="1.1" style="height:0;position:absolute">#{symbols}</svg>}
+    end
+
+    def build_symbols(files)
+      files.map { |file|
+        svgs[file][:optimized_content] ||= optimize(svgs[file])
+      }.join.gsub(/\n/,'')
     end
 
     def js(key)
@@ -518,31 +519,62 @@ module Esvg
       end
     end
 
-    def prep_svg(content, attr)
-      content = content.gsub(/<?.+\?>/,'').gsub(/<!.+?>/,'')  # Get rid of doctypes and comments
+    def svgo?
+      !!(config[:optimize] && svgo_cmd)
+    end
+
+    def optimize(svg)
+      svg[:optimized_content] = pre_optimize svg[:content]
+      svg[:optimized_content] = sub_def_ids svg
+
+      if svgo?
+        response = Open3.capture3(%Q{#{} --disable=removeUselessDefs -s '#{svg[:content]}' -o -})
+        svg[:optimized_content] = response[0] if response[2].success?
+      end
+
+      svg[:optimized_content] = post_optimize svg
+      svg[:optimized_on] = Time.now.to_i
+
+      svg[:optimized_content]
+    end
+
+    def pre_optimize(svg)
+      reg = %w(xmlns xmlns:xlink xml:space version).map { |m| "#{m}=\".+?\"" }.join('|')
+      svg.gsub(Regexp.new(reg), '')                           # Remove unwanted attributes
+         .gsub(/<?.+\?>/,'').gsub(/<!.+?>/,'')                # Get rid of doctypes and comments
          .gsub(/\n/, '')                                      # Remove endlines
          .gsub(/\s{2,}/, ' ')                                 # Remove whitespace
          .gsub(/>\s+</, '><')                                 # Remove whitespace between tags
          .gsub(/\s?fill="(#0{3,6}|black|rgba?\(0,0,0\))"/,'') # Strip black fill
          .gsub(/style="([^"]*?)fill:(.+?);/m, 'fill="\2" style="\1')                   # Make fill a property instead of a style
          .gsub(/style="([^"]*?)fill-opacity:(.+?);/m, 'fill-opacity="\2" style="\1')   # Move fill-opacity a property instead of a style
+    end
 
-      content = sub_def_ids content, attr[:id]
-      content = strip_attributes content
-      content = optimize(content) if optimize?
-      content = set_attributes content, attr
-      content.gsub(/<\/svg/,'</symbol')      # Replace svgs with symbols
+    def post_optimize(svg)
+      svg[:optimized_content] = set_attributes(svg)
+        .gsub(/<\/svg/,'</symbol')      # Replace svgs with symbols
         .gsub(/class="def-/,'id="def-') # Replace <def> classes with ids (classes are generated in sub_def_ids)
-        .gsub(/\s{2,}/,'')                 # Remove extra spaces
         .gsub(/\w+=""/,'')              # Remove empty attributes
     end
 
+    def set_attributes(svg)
+      svg[:attr].keys.each { |key| svg[:optimized_content].sub!(/ #{key}=".+?"/,'') }
+      svg[:optimized_content].sub(/<svg/, "<symbol #{attributes(svg[:attr])}")
+    end
+
+    def svgo_cmd
+      find_node_module('svgo')
+    end
+    
     # Scans <def> blocks for IDs
     # If urls(#id) are used, ensure these IDs are unique to this file
     # Only replace IDs if urls exist to avoid replacing defs
     # used in other svg files
     #
-    def sub_def_ids(content, name)
+    def sub_def_ids(svg)
+      content = svg[:optimized_content]
+      name    = svg[:attr][:id]
+
       return content unless !!content.match(/<defs>/)
 
       content.scan(/<defs>.+<\/defs>/m).flatten.each do |defs|
@@ -560,35 +592,6 @@ module Esvg
       end
 
       content
-    end
-
-    def strip_attributes(svg)
-      reg = %w(xmlns xmlns:xlink xml:space version).map { |m| "#{m}=\".+?\"" }.join('|')
-
-      svg.gsub(Regexp.new(reg), '')
-    end
-
-    def set_attributes(svg, attr)
-      attr.keys.each { |key| svg.sub!(/ #{key}=".+?"/,'') }
-      svg.sub(/<svg/, "<symbol #{attributes(attr)}")
-    end
-
-    def optimize?
-      !!(config[:optimize] && svgo_cmd)
-    end
-
-    def svgo_cmd
-      find_node_module('svgo')
-    end
-
-
-    def optimize(svg)
-      path = write_tmp '.svgo-tmp', svg
-      command = "#{svgo_cmd} --disable=removeUselessDefs '#{path}' -o -"
-      svg = `#{command}`
-      FileUtils.rm(path) if File.exist? path
-
-      svg
     end
 
     def compress(file)
