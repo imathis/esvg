@@ -46,7 +46,7 @@
     if ( !names ) {
       names = {}
       for( var symbol of document.querySelectorAll( 'svg[id^=esvg] symbol' ) ) {
-        names[symbol.id] = symbol
+        names[symbol.getAttribute('name')] = symbol
       }
     }
     return names
