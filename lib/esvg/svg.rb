@@ -108,6 +108,7 @@ module Esvg
 
         # Name may have changed due to flatten config
         svgs[key][:name] = file_name(path)
+        svgs[key][:attr][:name] = id(svgs[key][:name])
 
         dirs[dkey]           ||= {}
         (dirs[dkey][:files]  ||= []) << key
@@ -450,7 +451,7 @@ module Esvg
     if ( !names ) {
       names = {}
       for( var symbol of document.querySelectorAll( 'svg[id^=esvg] symbol' ) ) {
-        names[symbol.id] = symbol
+        names[symbol.getAttribute('name')] = symbol
       }
     }
     return names
@@ -548,12 +549,12 @@ module Esvg
       reg = %w(xmlns xmlns:xlink xml:space version).map { |m| "#{m}=\".+?\"" }.join('|')
       svg.gsub(Regexp.new(reg), '')                           # Remove unwanted attributes
          .gsub(/<?.+\?>/,'').gsub(/<!.+?>/,'')                # Get rid of doctypes and comments
+         .gsub(/style="([^"]*?)fill:(.+?);/m, 'fill="\2" style="\1')                   # Make fill a property instead of a style
+         .gsub(/style="([^"]*?)fill-opacity:(.+?);/m, 'fill-opacity="\2" style="\1')   # Move fill-opacity a property instead of a style
          .gsub(/\n/, '')                                      # Remove endlines
          .gsub(/\s{2,}/, ' ')                                 # Remove whitespace
          .gsub(/>\s+</, '><')                                 # Remove whitespace between tags
          .gsub(/\s?fill="(#0{3,6}|black|rgba?\(0,0,0\))"/,'') # Strip black fill
-         .gsub(/style="([^"]*?)fill:(.+?);/m, 'fill="\2" style="\1')                   # Make fill a property instead of a style
-         .gsub(/style="([^"]*?)fill-opacity:(.+?);/m, 'fill-opacity="\2" style="\1')   # Move fill-opacity a property instead of a style
     end
 
     def post_optimize(svg)
