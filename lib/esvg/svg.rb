@@ -89,6 +89,7 @@ module Esvg
 
     def find_files
       files = Dir[File.join(config[:source], '**/*.svg')].uniq.sort
+      @svg_symbols = {}
 
       # Remove deleted files from svg cache
       (svgs.keys - file_keys(files)).each { |f| svgs.delete(f) }
@@ -102,8 +103,11 @@ module Esvg
 
         # Use cache if possible
         if svgs[key].nil? || svgs[key][:last_modified] != mtime
-          svgs[key] = process_file(path, mtime, key)
+          svgs[key] = process_file(path, mtime)
         end
+
+        # Name may have changed due to flatten config
+        svgs[key][:name] = file_name(path)
 
         dirs[dkey]           ||= {}
         (dirs[dkey][:files]  ||= []) << key
@@ -114,9 +118,6 @@ module Esvg
       end
 
       dirs = sort(dirs)
-
-      # Remove deleted directories from svg_symbols cache
-      (svg_symbols.keys - dirs.keys).each {|dir| svg_symbols.delete(dir) }
 
       dirs.each do |dir, data|
 
@@ -144,15 +145,12 @@ module Esvg
 
     def read_cache
       @svgs        = YAML.load(read_tmp '.svgs') || {}
-      @svg_symbols = YAML.load(read_tmp '.svg_symbols') || {}
     end
 
     def write_cache
       return if production?
 
       write_tmp '.svgs', sort(@svgs).to_yaml
-      write_tmp '.svg_symbols', sort(@svg_symbols).to_yaml
-
     end
 
     def sort(hash)
@@ -187,24 +185,22 @@ module Esvg
       end.map { |k| svg_symbols[k] }
     end
 
-    def process_file(file, mtime, name)
-      content   = File.read(file)
-      id        = id(name)
+    def process_file(path, mtime)
+      content   = File.read(path)
+      id        = id(file_key(path))
       size_attr = dimensions(content)
 
       {
-        name: name,
+        path: path,
         use: %Q{<use xlink:href="##{id}"/>},
         last_modified: mtime,
         attr: { id: id }.merge(size_attr),
-        content: content,
-        optimized: false
+        content: content
       }
     end
 
     def use(file, options={})
-      if name = exist?(file, options[:fallback])
-        svg = svgs[name]
+      if svg = find_svg(file, options[:fallback])
 
         if options[:color]
           options[:style] ||= ''
@@ -215,7 +211,7 @@ module Esvg
           fill:   options[:fill],
           style:  options[:style],
           viewBox: svg[:attr][:viewBox],
-          class: [config[:class], svg[:attr][:id], options[:class]].compact.join(' ')
+          class: [config[:class], id(svg[:name]), options[:class]].compact.join(' ')
         }
 
         # If user doesn't pass a size or set scale: true
@@ -273,14 +269,17 @@ module Esvg
     end
 
     def exist?(name, fallback=nil)
+      !find_svg(name, fallback).nil?
+    end
+
+    def find_svg(name, fallback=nil)
       name = get_alias dasherize(name)
 
-      if svgs[name].nil?
-        exist?(fallback) if fallback
-      else
-        name
+      if svg = svgs.values.find { |v| v[:name] == name }
+        svg
+      elsif fallback
+        find_svg(fallback)
       end
-
     end
 
     alias_method :exists?, :exist?
@@ -354,7 +353,7 @@ module Esvg
     def symbols(keys)
       symbols = valid_keys(keys).map { |key|
         # Build on demand
-        svg_symbols[key][:symbols] ||= build_symbols(svg_symbols[key][:files])
+        build_symbols(svg_symbols[key][:files])
       }.join.gsub(/\n/,'')
 
       %Q{<svg id="esvg-#{key_id(keys)}" version="1.1" style="height:0;position:absolute">#{symbols}</svg>}
@@ -362,7 +361,10 @@ module Esvg
 
     def build_symbols(files)
       files.map { |file|
-        svgs[file][:optimized_content] ||= optimize(svgs[file])
+        if svgs[file][:optimized_at].nil? || svgs[file][:optimized_at] < svgs[file][:last_modified]
+          svgs[file][:optimized_content] = optimize(svgs[file])
+        end
+        svgs[file][:optimized_content]
       }.join.gsub(/\n/,'')
     end
 
@@ -472,15 +474,25 @@ module Esvg
 
     private
 
+    def file_key(path)
+      dasherize sub_path(path).sub('.svg','')
+    end
+
     def dir_key(path)
       dir = File.dirname(flatten_path(path))
 
       # Flattened paths which should be treated as assets will use '_' as their dir key
+      # - flatten: _foo - _foo/icon.svg will have a dirkey of _
+      # - filename: _icons - treats all root or flattened files as assets
       if dir == '.' && ( sub_path(path).start_with?('_') || config[:filename].start_with?('_') )
         '_'
       else
         dir
       end
+    end
+
+    def file_name(path)
+      dasherize flatten_path(path).sub('.svg','')
     end
 
     def sub_path(path)
@@ -489,10 +501,6 @@ module Esvg
 
     def flatten_path(path)
       sub_path(path).sub(Regexp.new(config[:flatten]), '')
-    end
-
-    def file_key(path)
-      dasherize flatten_path(path).sub('.svg', '')
     end
 
     def file_keys(paths)
@@ -532,10 +540,8 @@ module Esvg
         svg[:optimized_content] = response[0] if response[2].success?
       end
 
+      svg[:optimized_at] = Time.now.to_i
       svg[:optimized_content] = post_optimize svg
-      svg[:optimized_on] = Time.now.to_i
-
-      svg[:optimized_content]
     end
 
     def pre_optimize(svg)
