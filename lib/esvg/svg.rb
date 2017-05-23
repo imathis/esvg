@@ -1,6 +1,7 @@
 require 'yaml'
 require 'json'
 require 'zlib'
+require 'digest'
 
 module Esvg
   class SVG

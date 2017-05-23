@@ -24,6 +24,10 @@ OptionParser.new do |opts|
     options[:optimize] = true
   end
 
+  opts.on("-z", "--gzip", "Write gzipped output") do
+    options[:compress] = true
+  end
+
   opts.on("-v", "--version", "Print version") do
     options[:version] = true
   end
