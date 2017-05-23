@@ -6,7 +6,7 @@
     - expected/assets build/assets
 - 
   title: "Test using filename to build svgs as assets"
-  before: esvg svg_icons --config _assets.yml
+  before: esvg svg_icons --config _assets.yml -C
   compare: 
     - expected/test-assets build/test-assets
 - 

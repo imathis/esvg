@@ -527,8 +527,8 @@ module Esvg
         File.join config[:assets], "#{name}.js"
       else # or a build file?
 
-        # User doesn't want a fingerprinted build file
-        if !config[:fingerprint]
+        # User doesn't want a fingerprinted build file and hasn't set a version
+        if !config[:fingerprint] && !config[:version]
           File.join config[:build], "#{name}.js"
         else
           File.join config[:build], "#{name}-#{version(key)}.js"
