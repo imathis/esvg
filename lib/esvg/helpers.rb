@@ -10,7 +10,7 @@ module Esvg::Helpers
 
 
   def embed_svgs(*keys)
-    if !Rails.env.production?
+    if Rails.env.production?
       esvg.build_paths(keys).map do |path|
         javascript_include_tag(path)
       end.join("\n").html_safe
