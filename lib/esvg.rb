@@ -34,7 +34,7 @@ module Esvg
   def precompile_assets
     if rails? && defined?(Rake)
       ::Rake::Task['assets:precompile'].enhance do
-        build(compress: true, print: true)
+        build(gzip: true, print: true)
       end
     end
   end

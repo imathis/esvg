@@ -5,7 +5,10 @@ $LOAD_PATH.unshift(File.expand_path("../lib", File.dirname(__FILE__)))
 require 'optparse'
 require 'esvg'
 
-options = {}
+options = {
+  core: false,
+  fingerprint: false,
+}
 
 OptionParser.new do |opts|
   opts.on("-o", "--output PATH", String, "Where should JS/HTML files be written, (default: current directory)") do |path|
@@ -16,6 +19,18 @@ OptionParser.new do |opts|
     options[:config_file] = path
   end
 
+  opts.on("-b", "--build", String, "Append a build version, (-b 1.2.3 -> svgs-1.2.3.js)") do |version|
+    options[:version] = version
+  end
+
+  opts.on("-f", "--fingerprint", "Fingerprint the build files") do
+    options[:fingerprint] = true
+  end
+
+  opts.on("-C", "--core", "Write _esvg.js core javascript, Small utlities for working with svg embed") do
+    options[:core] = true
+  end
+
   opts.on("-r", "--rails", "Use Rails defaults") do
     options[:rails] = true
   end
@@ -24,8 +39,8 @@ OptionParser.new do |opts|
     options[:optimize] = true
   end
 
-  opts.on("-z", "--gzip", "Write gzipped output") do
-    options[:compress] = true
+  opts.on("-z", "--gzip", "Write gzip compressed output") do
+    options[:gzip] = true
   end
 
   opts.on("-v", "--version", "Print version") do

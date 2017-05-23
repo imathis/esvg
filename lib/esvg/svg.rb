@@ -14,7 +14,8 @@ module Esvg
       core: true,
       namespace_before: true,
       optimize: false,
-      compress: false,
+      gzip: false,
+      fingerprint: true,
       throttle_read: 4,
       flatten: [],
       alias: {}
@@ -525,7 +526,13 @@ module Esvg
       if name.start_with?('_') # Is it an asset?
         File.join config[:assets], "#{name}.js"
       else # or a build file?
-        File.join config[:build], "#{name}-#{version(key)}.js"
+
+        # User doesn't want a fingerprinted build file
+        if !config[:fingerprint]
+          File.join config[:build], "#{name}.js"
+        else
+          File.join config[:build], "#{name}-#{version(key)}.js"
+        end
       end
     end
 
@@ -603,7 +610,7 @@ module Esvg
     end
 
     def compress(file)
-      return if !config[:compress]
+      return if !config[:gzip]
 
       mtime = File.mtime(file)
       gz_file = "#{file}.gz"
