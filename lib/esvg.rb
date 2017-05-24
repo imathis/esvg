@@ -25,23 +25,23 @@ module Esvg
 
   def use(name, options={})
     if symbol = find_symbol(name, options)
-      symbol.use options
+      html_safe symbol.use options
     end
   end
 
   def use_tag(name, options={})
     if symbol = find_symbol(name, options)
-      symbol.use_tag options
+      html_safe symbol.use_tag options
     end
   end
 
   def embed(names=nil)
     if rails? && Rails.env.production?
-      build_paths(names).each do |path|
-        javascript_include_tag(path)
-      end.join("\n").html_safe
+      html_safe build_paths(names).each do |path|
+        javascript_include_tag(path, async: true)
+      end.join("\n")
     else
-      find_svgs(names).map{|s| s.embed_script(names) }.join
+      html_safe find_svgs(names).map{|s| s.embed_script(names) }.join
     end
   end
 
@@ -53,7 +53,7 @@ module Esvg
     @svgs.select {|s| s.buildable_svgs(names) }
   end
 
-  def find_symbol(name, options)
+  def find_symbol(name, options={})
     if group = @svgs.find {|s| s.find_symbol(name, options[:fallback]) }
       group.find_symbol(name, options[:fallback])
     end
@@ -61,6 +61,11 @@ module Esvg
 
   def rails?
     defined?(Rails)
+  end
+
+  def html_safe(input)
+    input = input.html_safe if rails?
+    input
   end
 
   def build(options={})
