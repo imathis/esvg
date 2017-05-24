@@ -17,12 +17,16 @@
 
   function use( name, options ) {
     options = options || {}
-    var id = dasherize( svgName( name ) )
+    var id = dasherize( name )
     var symbol = svgs()[id]
 
     if ( symbol ) {
+      var parent = symbol.parentElement
+      var prefix = parent.dataset.prefix
+      var base   = parent.dataset.symbolClass
+
       var svg = document.createRange().createContextualFragment( '<svg><use xlink:href="#'+id+'"/></svg>' ).firstChild;
-      svg.setAttribute( 'class', 'svg-symbol '+id+' '+( options.classname || '' ).trim() )
+      svg.setAttribute( 'class', base + ' ' + prefix + '-' + id + ' ' + ( options.class || '' ).trim() )
       svg.setAttribute( 'viewBox', symbol.getAttribute( 'viewBox' ) )
 
       if ( !( options.width || options.height || options.scale ) ) {
@@ -46,7 +50,7 @@
     if ( !names ) {
       names = {}
       for( var symbol of document.querySelectorAll( 'svg[id^=esvg] symbol' ) ) {
-        names[symbol.getAttribute('name')] = symbol
+        names[symbol.dataset.name] = symbol
       }
     }
     return names
