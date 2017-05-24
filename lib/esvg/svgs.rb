@@ -8,6 +8,8 @@ module Esvg
   class Svgs
     include Esvg::Utils
 
+    attr_reader :symbols
+
     CONFIG = {
       filename: 'svgs',
       class: 'svg-symbol',
@@ -140,28 +142,16 @@ module Esvg
       end
     end
 
-    def use_svg(file, options={})
-      if symbol = find_symbol(file, options[:fallback])
-        symbol.use(options)
-      end
-    end
-
-    def use_tag(file, options={})
-      if symbol = find_symbol(file, options[:fallback])
-        symbol.use_tag(options)
-      end
-    end
-
     # Embed only build scripts
     def embed_script(names=nil)
-      embeds = non_asset_svgs(names).map(&:embed)
+      embeds = buildable_svgs(names).map(&:embed)
       if !embeds.empty?
         "<script>#{js(embeds.join("\n"))}</script>"
       end
     end
 
     def build_paths(names=nil)
-      non_asset_svgs(names).map{ |f| File.basename(f.path) }
+      buildable_svgs(names).map{ |f| File.basename(f.path) }
     end
 
     def find_symbol(name, fallback=nil)
@@ -180,11 +170,11 @@ module Esvg
       @svgs.select { |svg| svg.named?(names) }
     end
 
-    private
-
-    def non_asset_svgs(names=nil)
+    def buildable_svgs(names=nil)
       find_svgs(names).reject(&:asset)
     end
+
+    private
 
     def js(embed)
       %Q{(function(){

@@ -30,29 +30,6 @@ module Esvg
       sorted
     end
 
-    # Determine if an NPM module is installed by checking paths with `npm bin`
-    # Returns path to binary if installed
-    def node_module(cmd)
-      require 'open3'
-
-      @modules ||= {}
-
-      return @modules[cmd] unless @modules[cmd].nil?
-
-      @modules[cmd] = begin
-        local = "$(npm bin)/#{cmd}"
-        global = "$(npm -g bin)/#{cmd}"
-
-        if Open3.capture3(local)[2].success?
-          local
-        elsif Open3.capture3(global)[2].success?
-          global
-        else
-          false
-        end
-      end
-    end
-
     def compress(file)
       mtime = File.mtime(file)
       gz_file = "#{file}.gz"

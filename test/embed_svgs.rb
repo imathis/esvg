@@ -1,13 +1,13 @@
 require 'esvg'
 require 'fileutils'
 
-svgs = Esvg.new({config_file: '_alias.yml', source: 'svg_icons'})
+Esvg.new({config_file: '_alias.yml', source: 'svg_icons'})
 
 # Test standard svg icon usage
-embed_all        = svgs.embed_script
-embed_sub_folder = svgs.embed_script('sub_folder')
-all_paths        = svgs.build_paths
-sub_folder_paths = svgs.build_paths('sub_folder')
+embed_all        = Esvg.embed
+embed_sub_folder = Esvg.embed('sub_folder')
+all_paths        = Esvg.build_paths
+sub_folder_paths = Esvg.build_paths('sub_folder')
 
 def log_path(path)
   File.expand_path(path).sub(File.expand_path(Dir.pwd), '').sub(/^\//,'')

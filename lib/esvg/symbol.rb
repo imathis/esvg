@@ -1,3 +1,5 @@
+require 'open3'
+
 module Esvg
   class Symbol
     attr_reader :name, :id, :path, :content, :optimized, :size, :group, :mtime
@@ -72,13 +74,7 @@ module Esvg
         use_attr[:height] = options[:height]
       end
 
-      use = %Q{<svg #{attributes(use_attr)}>#{use_tag}#{title(options)}#{desc(options)}#{options[:content]||''}</svg>}
-
-      if Esvg.rails?
-        use.html_safe
-      else
-        use
-      end
+      %Q{<svg #{attributes(use_attr)}>#{use_tag}#{title(options)}#{desc(options)}#{options[:content]||''}</svg>}
     end
 
     def use_tag(options={})
@@ -109,8 +105,8 @@ module Esvg
       @optimized = @content
       sub_def_ids
 
-      if @config[:optimize] && node_module('svgo')
-        response = Open3.capture3(%Q{#{node_module('svgo')} --disable=removeUselessDefs -s '#{@optimized}' -o -})
+      if @config[:optimize] && Esvg.node_module('svgo')
+        response = Open3.capture3(%Q{#{Esvg.node_module('svgo')} --disable=removeUselessDefs -s '#{@optimized}' -o -})
         @optimized = response[0] if response[2].success?
       end
 
