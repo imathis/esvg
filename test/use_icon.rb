@@ -4,18 +4,18 @@ require 'fileutils'
 svgs = Esvg.new({config_file: '_alias.yml', source: 'svg_icons', temp: 'build/tmp'})
 
 # Test standard svg icon usage
-use = svgs.svg_icon('comment-bubble')
+use = svgs.use_svg('comment-bubble')
 
 # Test passing properties to style attribute
-use_style = svgs.svg_icon('comment-bubble', style: 'display: none', content: "<title>test</title>")
-use_scale = svgs.svg_icon('sub-folder/test', scale: true)
-use_width = svgs.svg_icon('sub-folder/test', width: '200px')
+use_style = svgs.use_svg('comment-bubble', style: 'display: none', content: "<title>test</title>")
+use_scale = svgs.use_svg('sub-folder/test', scale: true)
+use_width = svgs.use_svg('sub-folder/test', width: '200px')
 
 # Test alias for icon name
-use_alias = svgs.svg_icon('chat-bubble')
+use_alias = svgs.use_svg('chat-bubble')
 
 # Test fallback option
-fallback = svgs.svg_icon('boo', fallback: 'comment-bubble')
+fallback = svgs.use_svg('boo', fallback: 'comment-bubble')
 
 def log_path(path)
   File.expand_path(path).sub(File.expand_path(Dir.pwd), '').sub(/^\//,'')

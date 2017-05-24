@@ -1,6 +1,8 @@
 require "fileutils"
 
 require "esvg/version"
+require "esvg/utils"
+require "esvg/svgs"
 require "esvg/svg"
 
 if defined?(Rails)
@@ -12,7 +14,7 @@ module Esvg
   extend self
 
   def new(options={})
-    @svgs = SVG.new(options)
+    @svgs = Svgs.new(options)
   end
 
   def svgs

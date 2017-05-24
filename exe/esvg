@@ -58,5 +58,5 @@ else
   end
 
   options[:print] = true
-  esvg = Esvg::SVG.new(options).build
+  esvg = Esvg::Svgs.new(options).build
 end
