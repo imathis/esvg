@@ -68,14 +68,10 @@ module Esvg
     input
   end
 
-  def build(options={})
-    new(options).build
-  end
-
   def precompile_assets
     if rails? && defined?(Rake)
       ::Rake::Task['assets:precompile'].enhance do
-        build(gzip: true, print: true)
+        Svgs.new(gzip: true, print: true).build
       end
     end
   end

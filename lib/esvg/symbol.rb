@@ -22,6 +22,7 @@ module Esvg
         @content = pre_optimize File.read(@path)
         @size    = dimensions
         @optimized = nil
+        @optimized_at = nil
       end
       @group = dir_key
       @name  = file_name
@@ -36,7 +37,7 @@ module Esvg
         id: @id,
         name: @name,
         group: @group,
-        last_modified: @mtime,
+        mtime: @mtime,
         size: @size,
         content: @content,
         optimized: @optimized,
@@ -100,7 +101,7 @@ module Esvg
 
     def optimize
       # Only optimize again if the file has changed
-      return @optimized if @optimized_at && @optimized_at > @mtime
+      return @optimized if @optimized && @optimized_at > @mtime
 
       @optimized = @content
       sub_def_ids
@@ -119,10 +120,16 @@ module Esvg
     private
 
     def load_data
-      if @config[:cache]
-        @config.delete(:cache).each do |name, value|
-          set_instance name.to_s, value
-        end
+      if c = @config[:cache]
+        @path         = c[:path]
+        @id           = c[:id]
+        @name         = c[:name]
+        @group        = c[:group]
+        @mtime        = c[:mtime]
+        @size         = c[:size]
+        @content      = c[:content]
+        @optimized    = c[:optimized]
+        @optimized_at = c[:optimized_at]
       end
     end
 

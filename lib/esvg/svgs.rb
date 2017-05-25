@@ -122,7 +122,7 @@ module Esvg
         puts "Writing #{file.path}" if config[:print]
         paths << file.path
 
-        if !file.asset && config[:gzip] && gz = compress(file[:path])
+        if !file.asset && config[:gzip] && gz = compress(file.path)
           puts "Writing #{gz}" if config[:print]
           paths << gz
         end
@@ -137,8 +137,9 @@ module Esvg
     end
 
     def read_cache
-      (YAML.load(read_tmp '.symbols') || []).each do |s|
-        @symbols << Symbol.new(s[:path], config)
+      (YAML.load(read_tmp '.symbols') || []).each do |c|
+        config[:cache] = c
+        @symbols << Symbol.new(c[:path], config)
       end
     end
 
