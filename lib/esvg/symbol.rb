@@ -24,11 +24,27 @@ module Esvg
         @optimized = nil
         @optimized_at = nil
       end
+
+      # Ensure that cache optimization matches current optimization settings
+      # If config has changed name, reset optimized build (name gets baked in)
+      if @svgo_optimized != svgo? || name != file_name
+        @optimized = nil
+        @optimized_at = nil
+      end
+      
       @group = dir_key
       @name  = file_name
       @id    = file_id file_key
 
       self
+    end
+
+    def width
+      @size[:width]
+    end
+
+    def height
+      @size[:height]
     end
 
     def data
@@ -41,7 +57,8 @@ module Esvg
         size: @size,
         content: @content,
         optimized: @optimized,
-        optimized_at: @optimized_at
+        optimized_at: @optimized_at,
+        svgo_optimized: svgo? && @svgo_optimized
       }
     end
 
@@ -59,7 +76,8 @@ module Esvg
         class: [@config[:class], @config[:prefix]+"-"+@name, options[:class]].compact.join(' '),
         viewBox: @size[:viewBox],
         style:  options[:style],
-        fill:   options[:fill]
+        fill:   options[:fill],
+        role: 'img'
       }
 
       # If user doesn't pass a size or set scale: true
@@ -80,6 +98,8 @@ module Esvg
 
     def use_tag(options={})
       options["xlink:href"] = "##{@id}"
+      options[:width]  ||= width
+      options[:height] ||= height
       %Q{<use #{attributes(options)}/>}
     end
 
@@ -99,6 +119,10 @@ module Esvg
       end
     end
 
+    def svgo?
+      @config[:optimize] && !!Esvg.node_module('svgo')
+    end
+
     def optimize
       # Only optimize again if the file has changed
       return @optimized if @optimized && @optimized_at > @mtime
@@ -106,9 +130,12 @@ module Esvg
       @optimized = @content
       sub_def_ids
 
-      if @config[:optimize] && Esvg.node_module('svgo')
+      if svgo? 
         response = Open3.capture3(%Q{#{Esvg.node_module('svgo')} --disable=removeUselessDefs -s '#{@optimized}' -o -})
-        @optimized = response[0] if response[2].success?
+        if !response[0].empty? && response[2].success?
+          @optimized = response[0]
+          @svgo_optimized = true
+        end
       end
 
       post_optimize
@@ -120,16 +147,10 @@ module Esvg
     private
 
     def load_data
-      if c = @config[:cache]
-        @path         = c[:path]
-        @id           = c[:id]
-        @name         = c[:name]
-        @group        = c[:group]
-        @mtime        = c[:mtime]
-        @size         = c[:size]
-        @content      = c[:content]
-        @optimized    = c[:optimized]
-        @optimized_at = c[:optimized_at]
+      if @config[:cache]
+        @config.delete(:cache).each do |name, value|
+          instance_variable_set("@#{name}", value)
+        end
       end
     end
 
@@ -221,7 +242,7 @@ module Esvg
         @optimized.sub!(/ #{key}=".+?"/,'')
       end
 
-      @optimized.sub!(/<svg/, "<symbol #{attributes(attr)}")
+      @optimized.sub(/<svg/, "<symbol #{attributes(attr)}")
     end
 
     # Scans <def> blocks for IDs
@@ -239,15 +260,15 @@ module Esvg
           if @optimized.match(/url\(##{id}\)/)
             new_id = "def-#{@id}-#{index}"
 
-            @optimized.gsub! /id="#{id}"/, %Q{class="#{new_id}"}
-            @optimized.gsub! /url\(##{id}\)/, "url(##{new_id})"
+            @optimized = @optimized.gsub(/id="#{id}"/, %Q{class="#{new_id}"})
+                                   .gsub(/url\(##{id}\)/, "url(##{new_id})")
 
           # Otherwise just leave the IDs of the
           # defs and change them to classes to 
           # avoid SVGO ID mangling
           #
           else
-            @optimized.gsub! /id="#{id}"/, %Q{class="#{id}"}
+            @optimized = @optimized.gsub /id="#{id}"/, %Q{class="#{id}"}
           end
         end
       end
