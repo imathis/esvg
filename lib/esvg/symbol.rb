@@ -63,7 +63,7 @@ module Esvg
     end
 
     def attr
-      { id: @id, 'data-name': @name }.merge @size
+      { id: @id, 'data-name' => @name }.merge @size
     end
 
     def use(options={})
