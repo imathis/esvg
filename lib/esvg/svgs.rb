@@ -34,7 +34,7 @@ module Esvg
       config(options)
       @symbols = []
       @svgs = []
-      @last_read = nil
+      @last_read = 0
       read_cache
 
       load_files
@@ -74,9 +74,7 @@ module Esvg
     end
 
     def load_files
-      if !@last_read.nil? && (Time.now.to_i - @last_read) < config[:throttle_read]
-        return
-      end
+      return if (Time.now.to_i - @last_read) < config[:throttle_read]
 
       files = Dir[File.join(config[:source], '**/*.svg')].uniq.sort
 
@@ -156,6 +154,9 @@ module Esvg
     end
 
     def find_symbol(name, fallback=nil)
+      # Ensure that file changes are picked up in development
+      load_files unless Esvg.rails? && Rails.env.production?
+
       name = get_alias dasherize(name)
 
       if svg = @symbols.find { |s| s.name == name }
