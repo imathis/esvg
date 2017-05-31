@@ -72,7 +72,7 @@ module Esvg
         options[:style] += "color:#{options[:color]};#{options[:style]}"
       end
 
-      use_attr = {
+      svg_attr = {
         class: [@config[:class], @config[:prefix]+"-"+@name, options[:class]].compact.join(' '),
         viewBox: @size[:viewBox],
         style:  options[:style],
@@ -81,25 +81,35 @@ module Esvg
       }
 
       # If user doesn't pass a size or set scale: true
-      if !(options[:width] || options[:height] || options[:scale])
-
-        # default to svg dimensions
-        use_attr[:width]  = @size[:width]
-        use_attr[:height] = @size[:height]
+      if options[:width].nil? && options[:height].nil? && !options[:scale]
+        svg_attr[:width]  = width
+        svg_attr[:height] = height
       else
-
         # Add sizes (nil options will be stripped)
-        use_attr[:width]  = options[:width]
-        use_attr[:height] = options[:height]
+        svg_attr[:width]  = options[:width]
+        svg_attr[:height] = options[:height]
       end
 
-      %Q{<svg #{attributes(use_attr)}>#{use_tag}#{title(options)}#{desc(options)}#{options[:content]||''}</svg>}
+      use_attr = {
+        height: options[:height],
+        width: options[:width],
+        scale: options[:scale],
+      }
+
+      %Q{<svg #{attributes(svg_attr)}>#{use_tag(use_attr)}#{title(options)}#{desc(options)}#{options[:content]||''}</svg>}
     end
 
     def use_tag(options={})
       options["xlink:href"] = "##{@id}"
-      options[:width]  ||= width
-      options[:height] ||= height
+
+      # If user doesn't pass a size or set scale: true
+      if options[:width].nil? && options[:height].nil? && options[:scale].nil?
+        options[:width]  ||= width
+        options[:height] ||= height
+      end
+
+      options.delete(:scale)
+
       %Q{<use #{attributes(options)}/>}
     end
 
@@ -207,8 +217,8 @@ module Esvg
 
         {
           viewBox: viewbox,
-          width: coords[2].to_i - coords[0].to_i,
-          height: coords[3].to_i - coords[1].to_i
+          width: (coords[2].to_i - coords[0].to_i).abs,
+          height: (coords[3].to_i - coords[1].to_i).abs
         }
       else
         {}
