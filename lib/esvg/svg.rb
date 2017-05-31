@@ -71,10 +71,10 @@ module Esvg
 
     def svg
       attr = {
-        "data-symbol-class": @config[:class],
-        "data-prefix": @config[:prefix],
-        "version": "1.1",
-        "style": "height:0;position:absolute"
+        "data-symbol-class" => @config[:class],
+        "data-prefix" => @config[:prefix],
+        "version" => "1.1",
+        "style" => "height:0;position:absolute"
       }
       %Q{<svg id="esvg-#{id}" #{attributes(attr)}>#{optimize}</svg>}
     end
