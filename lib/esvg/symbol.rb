@@ -139,6 +139,7 @@ module Esvg
 
       @optimized = @content
       sub_def_ids
+      move_defs
 
       if svgo? 
         response = Open3.capture3(%Q{#{Esvg.node_module('svgo')} --disable=removeUselessDefs -s '#{@optimized}' -o -})
@@ -281,6 +282,14 @@ module Esvg
             @optimized = @optimized.gsub /id="#{id}"/, %Q{class="#{id}"}
           end
         end
+      end
+    end
+
+    # <defs> should be moved to the beginning of the SVG file for braod browser support. Ahem, Firefox ಠ_ಠ
+    def move_defs
+      if defs = @optimized.scan(/(\s*<defs>.+<\/defs>\s*)/m).flatten[0]
+        @optimized.sub!(defs, '')
+        @optimized.sub!(/(<svg.+?>)/, "\1#{defs}")
       end
     end
   end
