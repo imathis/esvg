@@ -36,13 +36,7 @@ module Esvg
   end
 
   def embed(names=nil)
-    if rails? && Rails.env.production?
-      html_safe build_paths(names).each do |path|
-        javascript_include_tag(path, async: true)
-      end.join("\n")
-    else
-      html_safe find_svgs(names).map{|s| s.embed_script(names) }.join
-    end
+    html_safe find_svgs(names).map{|s| s.embed_script(names) }.join
   end
 
   def build_paths(names=nil)
