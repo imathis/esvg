@@ -11,6 +11,7 @@ module Esvg
       @name = name
       @config = config
       @symbols = symbols
+      @symbol_defs = []
       @asset = File.basename(name).start_with?('_')
       @version = @config[:version] || Digest::MD5.hexdigest(symbols.map(&:mtime).join)
     end
@@ -65,10 +66,6 @@ module Esvg
       end
     end
 
-    def optimize
-      @symbols.map(&:optimize).join.gsub("\n",'')
-    end
-
     def svg
       attr = {
         "data-symbol-class" => @config[:class],
@@ -76,7 +73,13 @@ module Esvg
         "version" => "1.1",
         "style" => "height:0;position:absolute"
       }
-      %Q{<svg id="esvg-#{id}" #{attributes(attr)}>#{optimize}</svg>}
+
+      defs = @symbols.map(&:defs).compact.join
+      defs = "<defs>#{defs}</defs>" unless defs.empty?
+
+      optimized = @symbols.map(&:optimize).join.gsub("\n",'')
+
+      %Q{<svg id="esvg-#{id}" #{attributes(attr)}>#{defs}#{optimized}</svg>}
     end
 
   end

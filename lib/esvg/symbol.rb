@@ -2,7 +2,7 @@ require 'open3'
 
 module Esvg
   class Symbol
-    attr_reader :name, :id, :path, :content, :optimized, :size, :group, :mtime
+    attr_reader :name, :id, :path, :content, :optimized, :size, :group, :mtime, :defs
 
     include Esvg::Utils
 
@@ -17,24 +17,23 @@ module Esvg
       return if !File.exist?(@path)
 
       time = last_modified
-      if @mtime != time
-        @mtime   = time
-        @content = pre_optimize File.read(@path)
-        @size    = dimensions
+
+      # Ensure that cache optimization matches current optimization settings
+      # If config has changed name, reset optimized build (name gets baked in)
+      if @mtime != time || @svgo_optimized != svgo? || name != file_name
         @optimized = nil
         @optimized_at = nil
       end
 
-      # Ensure that cache optimization matches current optimization settings
-      # If config has changed name, reset optimized build (name gets baked in)
-      if @svgo_optimized != svgo? || name != file_name
-        @optimized = nil
-        @optimized_at = nil
-      end
-      
       @group = dir_key
       @name  = file_name
       @id    = file_id file_key
+
+      if @mtime != time
+        @content = prep_defs pre_optimize File.read(@path)
+        @mtime   = time
+        @size    = dimensions
+      end
 
       self
     end
@@ -56,6 +55,7 @@ module Esvg
         mtime: @mtime,
         size: @size,
         content: @content,
+        defs: @defs,
         optimized: @optimized,
         optimized_at: @optimized_at,
         svgo_optimized: svgo? && @svgo_optimized
@@ -138,8 +138,6 @@ module Esvg
       return @optimized if @optimized && @optimized_at > @mtime
 
       @optimized = @content
-      sub_def_ids
-      move_defs
 
       if svgo? 
         response = Open3.capture3(%Q{#{Esvg.node_module('svgo')} --disable=removeUselessDefs -s '#{@optimized}' -o -})
@@ -227,6 +225,7 @@ module Esvg
     end
 
     def pre_optimize(svg)
+
       # Generate a regex of attributes to be removed
       att = Regexp.new %w(xmlns xmlns:xlink xml:space version).map { |m| "#{m}=\".+?\"" }.join('|')
 
@@ -244,7 +243,6 @@ module Esvg
     def post_optimize
       @optimized = set_attributes
         .gsub(/<\/svg/,'</symbol')      # Replace svgs with symbols
-        .gsub(/class="def-/,'id="def-') # Replace <def> classes with ids (classes are generated in sub_def_ids)
         .gsub(/\w+=""/,'')              # Remove empty attributes
     end
 
@@ -261,36 +259,28 @@ module Esvg
     # Only replace IDs if urls exist to avoid replacing defs
     # used in other svg files
     #
-    def sub_def_ids
-      @optimized.scan(/<defs>.+<\/defs>/m).flatten.each do |defs|
-        defs.scan(/id="(.+?)"/).flatten.uniq.each_with_index do |id, index|
+    def prep_defs(svg)
 
-          # If there are urls which refer to
-          # ids be sure to update both
-          #
-          if @optimized.match(/url\(##{id}\)/)
-            new_id = "def-#{@id}-#{index}"
+      # <defs> should be moved to the beginning of the SVG file for braod browser support. Ahem, Firefox ಠ_ಠ
+      # When symbols are reassembled, @defs will be added back
+      
+      if @defs = svg.scan(/<defs>(.+)<\/defs>/m).flatten[0]
+        svg.sub!("<defs>#{@defs}</defs>", '')
+        @defs.gsub!(/(\n|\s{2,})/,'')
 
-            @optimized = @optimized.gsub(/id="#{id}"/, %Q{class="#{new_id}"})
-                                   .gsub(/url\(##{id}\)/, "url(##{new_id})")
+        @defs.scan(/id="(.+?)"/).flatten.uniq.each_with_index do |id, index|
 
-          # Otherwise just leave the IDs of the
-          # defs and change them to classes to 
-          # avoid SVGO ID mangling
-          #
-          else
-            @optimized = @optimized.gsub /id="#{id}"/, %Q{class="#{id}"}
+          # If there are urls matching def ids
+          if svg.match(/url\(##{id}\)/)
+
+            new_id = "def-#{@id}-#{index}"                 # Generate a unique id
+            @defs.gsub!(/id="#{id}"/, %Q{id="#{new_id}"})  # Replace the def ids
+            svg.gsub!(/url\(##{id}\)/, "url(##{new_id})")  # Replace url references to these old def ids
           end
         end
       end
-    end
 
-    # <defs> should be moved to the beginning of the SVG file for braod browser support. Ahem, Firefox ಠ_ಠ
-    def move_defs
-      if defs = @optimized.scan(/(\s*<defs>.+<\/defs>\s*)/m).flatten[0]
-        @optimized.sub!(defs, '')
-        @optimized.sub!(/(<svg.+?>)/, "\1#{defs}")
-      end
+      svg
     end
   end
 end
