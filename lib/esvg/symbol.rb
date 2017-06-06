@@ -67,36 +67,37 @@ module Esvg
     end
 
     def use(options={})
-      if options[:color]
-        options[:style] ||= ''
-        options[:style] += "color:#{options[:color]};#{options[:style]}"
+      options.delete(:fallback)
+      content = options.delete(:content) || ''
+
+      if desc   = options.delete(:desc)
+        content = "<desc>#{desc}</desc>#{content}"
       end
-
-      svg_attr = {
-        class: [@config[:class], @config[:prefix]+"-"+@name, options[:class]].compact.join(' '),
-        viewBox: @size[:viewBox],
-        style:  options[:style],
-        fill:   options[:fill],
-        role: 'img'
-      }
-
-      # If user doesn't pass a size or set scale: true
-      if options[:width].nil? && options[:height].nil? && !options[:scale]
-        svg_attr[:width]  = width
-        svg_attr[:height] = height
-      else
-        # Add sizes (nil options will be stripped)
-        svg_attr[:width]  = options[:width]
-        svg_attr[:height] = options[:height]
+      if title  = options.delete(:title)
+        content = "<title>#{title}</title>#{content}"
       end
 
       use_attr = {
         height: options[:height],
         width: options[:width],
         scale: options[:scale],
-      }
+      }.merge(options.delete(:use) || {})
 
-      %Q{<svg #{attributes(svg_attr)}>#{use_tag(use_attr)}#{title(options)}#{desc(options)}#{options[:content]||''}</svg>}
+      svg_attr = {
+        class: [@config[:class], @config[:prefix]+"-"+@name, options.delete(:class)].compact.join(' '),
+        viewBox: @size[:viewBox],
+        role: 'img'
+      }.merge(options)
+
+      # If user doesn't pass a size or set scale: true
+      if svg_attr[:width].nil? && svg_attr[:height].nil? && !svg_attr[:scale]
+        svg_attr[:width]  = width
+        svg_attr[:height] = height
+      end
+
+      svg_attr.delete(:scale)
+
+      %Q{<svg #{attributes(svg_attr)}>#{use_tag(use_attr)}#{content}</svg>}
     end
 
     def use_tag(options={})
@@ -111,22 +112,6 @@ module Esvg
       options.delete(:scale)
 
       %Q{<use #{attributes(options)}/>}
-    end
-
-    def title(options)
-      if options[:title]
-        "<title>#{options[:title]}</title>"
-      else
-        ''
-      end
-    end
-
-    def desc(options)
-      if options[:desc]
-        "<desc>#{options[:desc]}</desc>"
-      else
-        ''
-      end
     end
 
     def svgo?
