@@ -17,6 +17,7 @@ module Esvg
       core: true,
       optimize: false,
       gzip: false,
+      scale: false,
       fingerprint: true,
       throttle_read: 4,
       flatten: [],

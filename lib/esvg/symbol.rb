@@ -77,11 +77,7 @@ module Esvg
         content = "<title>#{title}</title>#{content}"
       end
 
-      use_attr = {
-        height: options[:height],
-        width: options[:width],
-        scale: options[:scale],
-      }.merge(options.delete(:use) || {})
+      use_attr = options.delete(:use) || {}
 
       svg_attr = {
         class: [@config[:class], @config[:prefix]+"-"+@name, options.delete(:class)].compact.join(' '),
@@ -104,7 +100,7 @@ module Esvg
       options["xlink:href"] = "##{@id}"
 
       # If user doesn't pass a size or set scale: true
-      if options[:width].nil? && options[:height].nil? && options[:scale].nil?
+      if options[:width].nil? && options[:height].nil? && !options[:scale] && !@config[:scale]
         options[:width]  ||= width
         options[:height] ||= height
       end
