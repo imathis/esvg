@@ -17,7 +17,7 @@ module Esvg
     def attributes(hash)
       att = []
       hash.each do |key, value|
-        att << %Q{#{key}="#{value}"} unless value.nil?
+        att << %Q{#{key.to_s.gsub(/_/,'-')}="#{value}"} unless value.nil?
       end
       att.join(' ')
     end
