@@ -14,6 +14,7 @@ module Esvg
       filename: 'svgs',
       class: 'svg-symbol',
       prefix: 'svg',
+      cache_file: '.symbols',
       core: true,
       optimize: false,
       gzip: false,
@@ -132,11 +133,12 @@ module Esvg
     end
 
     def write_cache
-      write_tmp '.symbols', @symbols.map(&:data).to_yaml
+      puts "Writing cache" if config[:print]
+      write_tmp config[:cache_file], @symbols.map(&:data).to_yaml
     end
 
     def read_cache
-      (YAML.load(read_tmp '.symbols') || []).each do |c|
+      (YAML.load(read_tmp config[:cache_file]) || []).each do |c|
         config[:cache] = c
         @symbols << Symbol.new(c[:path], config)
       end
@@ -145,9 +147,20 @@ module Esvg
     # Embed only build scripts
     def embed_script(names=nil)
       embeds = buildable_svgs(names).map(&:embed)
+
+      write_cache if cache_stale?
+
       if !embeds.empty?
         "<script>#{js(embeds.join("\n"))}</script>"
       end
+
+    end
+
+    def cache_stale?
+      path = File.join(config[:temp], config[:cache_file])
+
+      # No cache file exists or cache file is older than a new symbol
+      !File.exist?(path) || File.mtime(path).to_i < @symbols.map(&:mtime).sort.last
     end
 
     def build_paths(names=nil)

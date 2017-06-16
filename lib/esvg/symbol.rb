@@ -9,6 +9,7 @@ module Esvg
     def initialize(path, config={})
       @config  = config
       @path    = path
+      @last_checked = 0
       load_data
       read
     end
@@ -16,11 +17,9 @@ module Esvg
     def read
       return if !File.exist?(@path)
 
-      time = last_modified
-
       # Ensure that cache optimization matches current optimization settings
       # If config has changed name, reset optimized build (name gets baked in)
-      if @mtime != time || @svgo_optimized != svgo? || name != file_name
+      if changed? || @svgo_optimized != svgo? || name != file_name
         @optimized = nil
         @optimized_at = nil
       end
@@ -29,9 +28,9 @@ module Esvg
       @name  = file_name
       @id    = file_id file_key
 
-      if @mtime != time
+      if changed?
         @content = prep_defs pre_optimize File.read(@path)
-        @mtime   = time
+        @mtime   = last_modified
         @size    = dimensions
       end
 
@@ -115,8 +114,10 @@ module Esvg
     end
 
     def optimize
+      read if changed?
+
       # Only optimize again if the file has changed
-      return @optimized if @optimized && @optimized_at > @mtime
+      return @optimized if @optimized && @optimized_at && @optimized_at > @mtime
 
       @optimized = @content
 
@@ -134,6 +135,10 @@ module Esvg
       @optimized
     end
 
+    def changed?
+      last_modified != mtime
+    end
+
     private
 
     def load_data
@@ -145,7 +150,12 @@ module Esvg
     end
 
     def last_modified
-      File.mtime(@path).to_i
+      if Time.now.to_i - @last_checked < @config[:throttle_read]
+        @last_modified
+      else
+        @last_checked = Time.now.to_i
+        @last_modified = File.mtime(@path).to_i
+      end
     end
 
     def file_id(name)

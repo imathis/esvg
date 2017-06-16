@@ -67,19 +67,23 @@ module Esvg
     end
 
     def svg
-      attr = {
-        "data-symbol-class" => @config[:class],
-        "data-prefix" => @config[:prefix],
-        "version" => "1.1",
-        "style" => "height:0;position:absolute"
-      }
+      if @svg && @symbols.select(&:changed?).empty?
+        @svg
+      else
+        attr = {
+          "data-symbol-class" => @config[:class],
+          "data-prefix" => @config[:prefix],
+          "version" => "1.1",
+          "style" => "height:0;position:absolute"
+        }
 
-      defs = @symbols.map(&:defs).compact.join
-      defs = "<defs>#{defs}</defs>" unless defs.empty?
+        defs = @symbols.map(&:defs).compact.join
+        defs = "<defs>#{defs}</defs>" unless defs.empty?
 
-      optimized = @symbols.map(&:optimize).join.gsub("\n",'')
+        optimized = @symbols.map(&:optimize).join.gsub("\n",'')
 
-      %Q{<svg id="esvg-#{id}" #{attributes(attr)}>#{defs}#{optimized}</svg>}
+        @svg = %Q{<svg id="esvg-#{id}" #{attributes(attr)}>#{defs}#{optimized}</svg>}
+      end
     end
 
   end
