@@ -58,6 +58,8 @@ module Esvg
 
         config.merge!(options)
 
+        p config
+
         config[:filename] = File.basename(config[:filename], '.*')
 
         config[:pwd]      = File.expand_path Dir.pwd

@@ -43,6 +43,13 @@ module Esvg
     find_svgs(names).map{|s| s.build_paths(names) }.flatten
   end
 
+  def seed_cache(options)
+    svgs = Svgs.new(options)
+    puts "Optimizing SVGs" if options[:print]
+    svgs.symbols.map(&:optimize)
+    svgs.write_cache
+  end
+
   def find_svgs(names=nil)
     @svgs.select {|s| s.buildable_svgs(names) }
   end
@@ -54,7 +61,7 @@ module Esvg
   end
 
   def rails?
-    defined?(Rails)
+    defined?(Rails) || File.exist?("./bin/rails")
   end
 
   def html_safe(input)
@@ -63,7 +70,7 @@ module Esvg
   end
 
   def precompile_assets
-    if rails? && defined?(Rake)
+    if defined?(Rails) && Rails.env.production? && defined?(Rake)
       ::Rake::Task['assets:precompile'].enhance do
         Svgs.new(gzip: true, print: true).build
       end

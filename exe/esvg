@@ -43,8 +43,16 @@ OptionParser.new do |opts|
     options[:gzip] = true
   end
 
+  opts.on("--seed", "Seed cache file with optimized svgs") do
+    options[:seed] = true
+  end
+
   opts.on("-v", "--version", "Print version") do
     options[:version] = true
+  end
+
+  opts.on("--test", "test func") do
+    options[:test] = true
   end
 
 end.parse!
@@ -58,5 +66,10 @@ else
   end
 
   options[:print] = true
-  esvg = Esvg::Svgs.new(options).build
+
+  if options[:seed]
+    Esvg.seed_cache(options)
+  else
+    esvg = Esvg.new(options).build
+  end
 end
