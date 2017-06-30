@@ -223,9 +223,10 @@ module Esvg
       svg.strip
         .gsub(att, '')                                       # Remove unwanted attributes
         .sub(/.+?<svg/,'<svg')                               # Get rid of doctypes and comments
+        .gsub(/<!--(.+?)-->/m, '')                           # Remove XML comments
         .gsub(/style="([^"]*?)fill:(.+?);/m, 'fill="\2" style="\1')                   # Make fill a property instead of a style
         .gsub(/style="([^"]*?)fill-opacity:(.+?);/m, 'fill-opacity="\2" style="\1')   # Move fill-opacity a property instead of a style
-        .gsub(/\n/, '')                                      # Remove endlines
+        .gsub(/\n/m, ' ')                                    # Remove endlines
         .gsub(/\s{2,}/, ' ')                                 # Remove whitespace
         .gsub(/>\s+</, '><')                                 # Remove whitespace between tags
         .gsub(/\s?fill="(#0{3,6}|black|rgba?\(0,0,0\))"/,'') # Strip black fill
