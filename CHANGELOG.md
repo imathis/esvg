@@ -1,5 +1,8 @@
 # Changelog
 
+### 4.3.9 (2017-09-05)
+- Fix: Esvg javascript now properly appends prefixes when generating use tags.
+
 ### 2.9.2 (2016-08-31)
 - Fix: Attributes width and height are now properly converted to strings.
 
