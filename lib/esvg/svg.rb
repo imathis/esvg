@@ -82,7 +82,7 @@ module Esvg
 
         optimized = @symbols.map(&:optimize).join.gsub("\n",'')
 
-        @svg = %Q{<svg id="esvg-#{id}" #{attributes(attr)}>#{defs}#{optimized}</svg>}
+        @svg = %Q{<svg id="esvg-#{id}" #{attributes(attr)} data-turbolinks-permanent>#{defs}#{optimized}</svg>}
       end
     end
 

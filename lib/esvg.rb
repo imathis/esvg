@@ -10,12 +10,49 @@ if defined?(Rails)
   require "esvg/railties" 
 end
 
+if defined?(Jekyll)
+  require "esvg/jekyll_hooks" 
+end
+
+CONFIG = {
+  filename: 'svgs',
+  class: 'svg-symbol',
+  prefix: 'svg',
+  cache_file: '.symbols',
+  core: true,
+  optimize: false,
+  gzip: false,
+  scale: false,
+  fingerprint: true,
+  throttle_read: 4,
+  flatten: [],
+  alias: {}
+}
+
+CONFIG_RAILS = {
+  source: "app/assets/svgs",
+  assets: "app/assets/javascripts",
+  build: "public/javascripts",
+  temp: "tmp"
+}
+
+CONFIG_JEKYLL = {
+  source: "_svgs",
+  build: "_site/javascripts",
+  core: false
+}
+
 module Esvg
+
   extend self
 
+  include Esvg::Utils
   def new(options={})
     @svgs ||=[]
-    @svgs << Svgs.new(options)
+    c = config(options)
+    unless @svgs.find { |s| s.config[:source] == c[:source] }
+      @svgs << Svgs.new(c)
+    end
     @svgs.last
   end
 
@@ -44,10 +81,11 @@ module Esvg
   end
 
   def seed_cache(options)
-    svgs = Svgs.new(options)
+    svgs = new(options)
     puts "Optimizing SVGs" if options[:print]
     svgs.symbols.map(&:optimize)
     svgs.write_cache
+    svgs
   end
 
   def find_svgs(names=nil)
@@ -72,7 +110,7 @@ module Esvg
   def precompile_assets
     if defined?(Rails) && Rails.env.production? && defined?(Rake)
       ::Rake::Task['assets:precompile'].enhance do
-        Svgs.new(gzip: true, print: true).build
+        new(gzip: true, print: true).build
       end
     end
   end
@@ -94,4 +132,67 @@ module Esvg
       false
     end
   end
+
+  def symbolize_keys(hash)
+    h = {}
+    hash.each {|k,v| h[k.to_sym] = v }
+    h
+  end
+
+  def config(options={})
+    paths = [options[:config_file], 'config/esvg.yml', 'esvg.yml'].compact
+
+    config = CONFIG.dup
+
+    if Esvg.rails? || options[:rails]
+      config.merge!(CONFIG_RAILS)
+    elsif defined?(Jekyll)
+      config.merge!(CONFIG_JEKYLL)
+    end
+
+    if path = paths.select{ |p| File.exist?(p)}.first
+      config.merge!(symbolize_keys(YAML.load(File.read(path) || {})))
+    end
+
+    config.merge!(options)
+
+    config[:filename] = File.basename(config[:filename], '.*')
+
+    config[:pwd]      = File.expand_path Dir.pwd
+    config[:source]   = File.expand_path config[:source] || config[:pwd]
+    config[:build]    = File.expand_path config[:build]  || config[:pwd]
+    config[:assets]   = File.expand_path config[:assets] || config[:pwd]
+
+    config[:temp]     = config[:pwd] if config[:temp].nil?
+    config[:temp]     = File.expand_path File.join(config[:temp], '.esvg-cache')
+
+    config[:aliases] = load_aliases(config[:alias])
+    config[:flatten] = [config[:flatten]].flatten.map { |dir| File.join(dir, '/') }.join('|')
+
+    config
+  end
+  
+  # Load aliases from configuration.
+  #  returns a hash of aliasees mapped to a name.
+  #  Converts configuration YAML:
+  #    alias:
+  #      foo: bar
+  #      baz: zip, zop
+  #  To output:
+  #    { :bar => "foo", :zip => "baz", :zop => "baz" }
+  #
+  def load_aliases(aliases)
+    a = {}
+    aliases.each do |name,alternates|
+      alternates.split(',').each do |val|
+        a[dasherize(val.strip).to_sym] = dasherize(name.to_s)
+      end
+    end
+    a
+  end
+
+  def dasherize(input)
+    input.gsub(/[\W,_]/, '-').sub(/^-/,'').gsub(/-{2,}/, '-')
+  end
+
 end

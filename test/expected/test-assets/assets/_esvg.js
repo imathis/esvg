@@ -25,7 +25,7 @@
       var prefix = parent.dataset.prefix
       var base   = parent.dataset.symbolClass
 
-      var svg = document.createRange().createContextualFragment( '<svg><use xlink:href="#'+id+'"/></svg>' ).firstChild;
+      var svg = document.createRange().createContextualFragment( '<svg><use xlink:href="#' + prefix + '-' + id + '"/></svg>' ).firstChild;
       svg.setAttribute( 'class', base + ' ' + prefix + '-' + id + ' ' + ( options.class || '' ).trim() )
       svg.setAttribute( 'viewBox', symbol.getAttribute( 'viewBox' ) )
 

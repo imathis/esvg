@@ -1,5 +1,8 @@
 # Changelog
 
+### 4.4.0 (2018-08-06)
+- New: Jekyll support. Just add esvg to the jekyll_plugins group in Gemfile and use {% esvg %} and {% use_svg %} as you'd expect.
+
 ### 4.3.9 (2017-09-05)
 - Fix: Esvg javascript now properly appends prefixes when generating use tags.
 

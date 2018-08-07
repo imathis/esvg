@@ -8,12 +8,6 @@ module Esvg
       path.sub(File.join(root,''),'')
     end
 
-    def symbolize_keys(hash)
-      h = {}
-      hash.each {|k,v| h[k.to_sym] = v }
-      h
-    end
-
     def attributes(hash)
       att = []
       hash.each do |key, value|

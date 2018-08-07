@@ -9,70 +9,16 @@ module Esvg
     include Esvg::Utils
 
     attr_reader :symbols
-
-    CONFIG = {
-      filename: 'svgs',
-      class: 'svg-symbol',
-      prefix: 'svg',
-      cache_file: '.symbols',
-      core: true,
-      optimize: false,
-      gzip: false,
-      scale: false,
-      fingerprint: true,
-      throttle_read: 4,
-      flatten: [],
-      alias: {}
-    }
-
-    CONFIG_RAILS = {
-      source: "app/assets/svgs",
-      assets: "app/assets/javascripts",
-      build: "public/javascripts",
-      temp: "tmp"
-    }
+    attr_reader :config
 
     def initialize(options={})
-      config(options)
+      @config = options
       @symbols = []
       @svgs = []
       @last_read = 0
       read_cache
 
       load_files
-    end
-
-    def config(options={})
-      @config ||= begin
-        paths = [options[:config_file], 'config/esvg.yml', 'esvg.yml'].compact
-
-        config = CONFIG.dup
-
-        if Esvg.rails? || options[:rails]
-          config.merge!(CONFIG_RAILS)
-        end
-
-        if path = paths.select{ |p| File.exist?(p)}.first
-          config.merge!(symbolize_keys(YAML.load(File.read(path) || {})))
-        end
-
-        config.merge!(options)
-
-        config[:filename] = File.basename(config[:filename], '.*')
-
-        config[:pwd]      = File.expand_path Dir.pwd
-        config[:source]   = File.expand_path config[:source] || config[:pwd]
-        config[:build]    = File.expand_path config[:build]  || config[:pwd]
-        config[:assets]   = File.expand_path config[:assets] || config[:pwd]
-
-        config[:temp]     = config[:pwd] if config[:temp].nil?
-        config[:temp]     = File.expand_path File.join(config[:temp], '.esvg-cache')
-
-        config[:aliases] = load_aliases(config[:alias])
-        config[:flatten] = [config[:flatten]].flatten.map { |dir| File.join(dir, '/') }.join('|')
-
-        config
-      end
     end
 
     def load_files
@@ -289,25 +235,6 @@ module Esvg
 
     def get_alias(name)
       config[:aliases][dasherize(name).to_sym] || name
-    end
-
-    # Load aliases from configuration.
-    #  returns a hash of aliasees mapped to a name.
-    #  Converts configuration YAML:
-    #    alias:
-    #      foo: bar
-    #      baz: zip, zop
-    #  To output:
-    #    { :bar => "foo", :zip => "baz", :zop => "baz" }
-    #
-    def load_aliases(aliases)
-      a = {}
-      aliases.each do |name,alternates|
-        alternates.split(',').each do |val|
-          a[dasherize(val.strip).to_sym] = dasherize(name.to_s)
-        end
-      end
-      a
     end
 
     def write_tmp(name, content)
