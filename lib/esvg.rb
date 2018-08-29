@@ -38,7 +38,7 @@ CONFIG_RAILS = {
 
 CONFIG_JEKYLL = {
   source: "_svgs",
-  build: "_site/javascripts",
+  build: "javascripts",
   core: false
 }
 
@@ -155,6 +155,11 @@ module Esvg
     end
 
     config.merge!(options)
+
+    if defined? Jekyll
+      config[:build] = File.join(config[:destination], config[:build])
+      config[:source] = File.join(config[:source_dir], config[:source])
+    end
 
     config[:filename] = File.basename(config[:filename], '.*')
 
