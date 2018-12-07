@@ -1,5 +1,8 @@
 # Changelog
 
+### 4.4.2 (2018-12-07)
+- Fix: Strips out fill=none, because Firefox doesn't let fill properties override SVGs with fill=none
+
 ### 4.4.0 (2018-08-06)
 - New: Jekyll support. Just add esvg to the jekyll_plugins group in Gemfile and use {% esvg %} and {% use_svg %} as you'd expect.
 

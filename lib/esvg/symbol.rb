@@ -229,7 +229,7 @@ module Esvg
         .gsub(/\n/m, ' ')                                    # Remove endlines
         .gsub(/\s{2,}/, ' ')                                 # Remove whitespace
         .gsub(/>\s+</, '><')                                 # Remove whitespace between tags
-        .gsub(/\s?fill="(#0{3,6}|black|rgba?\(0,0,0\))"/,'') # Strip black fill
+        .gsub(/\s?fill="(#0{3,6}|black|none|rgba?\(0,0,0\))"/,'') # Strip black fill
     end
 
     def post_optimize
