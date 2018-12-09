@@ -210,9 +210,10 @@ module Esvg
   function svgs(){
     if ( !names ) {
       names = {}
-      for( var symbol of document.querySelectorAll( 'svg[id^=esvg] symbol' ) ) {
+      var symbols = Array.prototype.slice.call( document.querySelectorAll( 'svg[id^=esvg] symbol' ) )
+      symbols.forEach( function( symbol ) {
         names[symbol.dataset.name] = symbol
-      }
+      })
     }
     return names
   }

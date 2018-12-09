@@ -106,7 +106,7 @@ module Esvg
 
       options.delete(:scale)
 
-      %Q{<use #{attributes(options)}/>}
+      %Q{<use #{attributes(options)}></use>}
     end
 
     def svgo?
