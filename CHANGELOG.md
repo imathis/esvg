@@ -1,5 +1,9 @@
 # Changelog
 
+### 4.4.3 (2018-12-09)
+- IE 10 compatibility fix: Replaced self-closing `<use>` tag with close tag version.
+- IE 10 compatibility fix: Using `forEach` instead of `for var of` because IE 10 is garbage. ¯\_(ツ)_/¯
+
 ### 4.4.2 (2018-12-07)
 - Fix: Strips out fill=none, because Firefox doesn't let fill properties override SVGs with fill=none
 
