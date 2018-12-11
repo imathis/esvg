@@ -1,5 +1,10 @@
 # Changelog
 
+### 4.5.0 (2018-12-11)
+- New: width and height will be scaled proportionately. So passing only `width: 50` will set height proportionately based on original svg dimensions.
+- To disable automatic calculation pass `scale: true`.
+- Units are supported, so `height: 1em` will find the proper `em` based proportion for width.
+
 ### 4.4.3 (2018-12-09)
 - IE 10 compatibility fix: Replaced self-closing `<use>` tag with close tag version.
 - IE 10 compatibility fix: Using `forEach` instead of `for var of` because IE 10 is garbage. ¯\_(ツ)_/¯
