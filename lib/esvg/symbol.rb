@@ -45,6 +45,41 @@ module Esvg
       @size[:height]
     end
 
+    # Scale width based on propotion to height
+    def scale_width( h )
+      s = split_unit( h )
+      "#{( s[:size] / height * width ).round(2)}#{s[:unit]}"
+    end
+
+    # Scale height based on propotion to width
+    def scale_height( w )
+      s = split_unit( w )
+      "#{( s[:size] / width * height ).round(2)}#{s[:unit]}"
+    end
+
+    # Separate size and unit for easier math.
+    # Returns: { size: 10, unit: 'px' }
+    def split_unit( size )
+      m = size.to_s.match(/(\d+)\s*(\D*)/)
+      { size: m[1].to_f, unit: m[2] }
+    end
+
+    def scale( a )
+      # Width was set, determine scaled height
+      if a[:width]
+        a[:height] ||= scale_height( a[:width] )
+      # Height was set, determine scaled width
+      elsif a[:height]
+        a[:width] ||= scale_width( a[:height] )
+      # Nothing was set, default to dimensions
+      else
+        a[:width]  = width
+        a[:height] = height
+      end
+
+      a
+    end
+
     def data
       {
         path: @path,
@@ -84,13 +119,13 @@ module Esvg
         role: 'img'
       }.merge(options)
 
-      # If user doesn't pass a size or set scale: true
-      if svg_attr[:width].nil? && svg_attr[:height].nil? && !svg_attr[:scale]
-        svg_attr[:width]  = width
-        svg_attr[:height] = height
+      if svg_attr[:scale]
+        # User doesn't want dimensions to be set
+        svg_attr.delete(:scale)
+      else
+        # Scale dimensions based on attributes
+        svg_attr = scale( svg_attr )
       end
-
-      svg_attr.delete(:scale)
 
       %Q{<svg #{attributes(svg_attr)}>#{use_tag(use_attr)}#{content}</svg>}
     end
@@ -98,10 +133,12 @@ module Esvg
     def use_tag(options={})
       options["xlink:href"] = "##{@id}"
 
-      # If user doesn't pass a size or set scale: true
-      if options[:width].nil? && options[:height].nil? && !options[:scale] && !@config[:scale]
-        options[:width]  ||= width
-        options[:height] ||= height
+      if options[:scale] && @config[:scale]
+        # User doesn't want dimensions to be set
+        options.delete(:scale)
+      else
+        # Scale dimensions based on attributes
+        options = scale( options )
       end
 
       options.delete(:scale)
@@ -121,7 +158,7 @@ module Esvg
 
       @optimized = @content
 
-      if svgo? 
+      if svgo?
         response = Open3.capture3(%Q{#{Esvg.node_module('svgo')} --disable=removeUselessDefs -s '#{@optimized}' -o -})
         if !response[0].empty? && response[2].success?
           @optimized = response[0]
@@ -255,7 +292,7 @@ module Esvg
 
       # <defs> should be moved to the beginning of the SVG file for braod browser support. Ahem, Firefox ಠ_ಠ
       # When symbols are reassembled, @defs will be added back
-      
+
       if @defs = svg.scan(/<defs>(.+)<\/defs>/m).flatten[0]
         svg.sub!("<defs>#{@defs}</defs>", '')
         @defs.gsub!(/(\n|\s{2,})/,'')
