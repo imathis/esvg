@@ -82,6 +82,12 @@ To place an SVG, use the `use_svg` vew helper. This helper will embed an SVG `us
 # Add custom styles
 <%= use_svg 'logo', style: 'fill: #c0ffee' %>
 
+# Use presets (setup in config yaml)
+<%= use_svg 'chevron', preset: 'icon' %>
+
+# Use size classes (setup in config yaml)
+<%= use_svg 'chevron', size: 'small' %>
+
 # Output: 
 # <svg class="svg-symbol svg-logo" style="fill: #coffee;"><use xlink:href="#svg-logo"/></svg>
 
@@ -129,6 +135,17 @@ namespace_before: true      # Add namespace before, e.g. 'svg-logo', false would
 alias:                      # Add aliases for icon names
   comment: chat             # use "chat" to reference comment.svg
   error: bad, broken        # Use "bad" or "broken" to reference error.svg
+
+presets:                    # Add named presets for setting common options
+  icon:                     # Passing option preset: 'icon' will set these defaults
+    height: 1em
+    class: icon
+
+sizes:                      # Define size classes for easy assignment
+  small:                    # size classes override presets
+    height: 10px
+  medium:
+    height: 20px
 ```
 
 ## Contributing

@@ -26,7 +26,9 @@ CONFIG = {
   fingerprint: true,
   throttle_read: 4,
   flatten: [],
-  alias: {}
+  alias: {},
+  presets: {},
+  sizes: {}
 }
 
 CONFIG_RAILS = {
@@ -133,10 +135,21 @@ module Esvg
     end
   end
 
-  def symbolize_keys(hash)
-    h = {}
-    hash.each {|k,v| h[k.to_sym] = v }
-    h
+  def deep_transform_keys_in_object(object, &block)
+    case object
+    when Hash
+      object.each_with_object({}) do |(key, value), result|
+        result[yield(key)] = deep_transform_keys_in_object(value, &block)
+      end
+    when Array
+      object.map {|e| deep_transform_keys_in_object(e, &block) }
+    else
+      object
+    end
+  end
+
+  def deep_symbolize_keys(hash)
+    deep_transform_keys_in_object( hash ){ |key| key.to_sym rescue key }
   end
 
   def config(options={})
@@ -151,7 +164,7 @@ module Esvg
     end
 
     if path = paths.select{ |p| File.exist?(p)}.first
-      config.merge!(symbolize_keys(YAML.load(File.read(path) || {})))
+      config.merge!(deep_symbolize_keys(YAML.load(File.read(path) || {})))
     end
 
     config.merge!(options)

@@ -101,6 +101,15 @@ module Esvg
     end
 
     def use(options={})
+      
+      if options[:preset] && preset = @config[:presets][ options.delete(:preset).to_sym ]
+        options = options.merge( preset )
+      end
+
+      if options[:size] && size_class = @config[:sizes][ options.delete(:size).to_sym ]
+        options = options.merge( size_class )
+      end
+
       options.delete(:fallback)
       content = options.delete(:content) || ''
 

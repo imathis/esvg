@@ -106,7 +106,7 @@ module Esvg
       path = File.join(config[:temp], config[:cache_file])
 
       # No cache file exists or cache file is older than a new symbol
-      !File.exist?(path) || File.mtime(path).to_i < @symbols.map(&:mtime).sort.last
+      !File.exist?(path) || @symbols.size > 0 && File.mtime(path).to_i < @symbols.map(&:mtime).sort.last
     end
 
     def build_paths(names=nil)

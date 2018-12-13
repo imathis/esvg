@@ -57,7 +57,7 @@ module Jekyll
         if @options.empty?
           @options = {}
         else
-          @options = Jekyll::Utils.symbolize_hash_keys(YAML.load(@options)) unless @options.empty?
+          @options = Esvg.deep_symbolize_hash_keys(YAML.load(@options)) unless @options.empty?
         end
       end
 
