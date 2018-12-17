@@ -90,9 +90,13 @@ module Esvg
       end
     end
 
-    # Embed only build scripts
+    # Embed svg symbols
     def embed_script(names=nil)
-      embeds = buildable_svgs(names).map(&:embed)
+      if Esvg.rails? && Rails.env.production?
+        embeds = buildable_svgs(names).map(&:embed)
+      else
+        embeds = find_svgs(names).map(&:embed)
+      end
 
       write_cache if cache_stale?
 

@@ -83,7 +83,6 @@ module Esvg
     def data
       {
         path: @path,
-        id: @id,
         name: @name,
         group: @group,
         mtime: @mtime,
@@ -102,10 +101,12 @@ module Esvg
 
     def use(options={})
       
+      # If preset key is set, merge presets from configuration
       if options[:preset] && preset = @config[:presets][ options.delete(:preset).to_sym ]
         options = options.merge( preset )
       end
 
+      # If size key is set, merge size class from configuration
       if options[:size] && size_class = @config[:sizes][ options.delete(:size).to_sym ]
         options = options.merge( size_class )
       end
@@ -165,20 +166,23 @@ module Esvg
       # Only optimize again if the file has changed
       return @optimized if @optimized && @optimized_at && @optimized_at > @mtime
 
-      @optimized = @content
-
       if svgo?
-        response = Open3.capture3(%Q{#{Esvg.node_module('svgo')} --disable=removeUselessDefs -s '#{@optimized}' -o -})
+        response = Open3.capture3(%Q{#{Esvg.node_module('svgo')} --disable=removeUselessDefs -s '#{@content}' -o -})
         if !response[0].empty? && response[2].success?
           @optimized = response[0]
           @svgo_optimized = true
         end
+
+        post_optimize
+        @optimized_at = Time.now.to_i
+
+        @optimized
       end
 
-      post_optimize
-      @optimized_at = Time.now.to_i
+    end
 
-      @optimized
+    def symbol
+      symbolize( optimize || @content )
     end
 
     def changed?
@@ -279,17 +283,22 @@ module Esvg
     end
 
     def post_optimize
-      @optimized = set_attributes
-        .gsub(/<\/svg/,'</symbol')      # Replace svgs with symbols
-        .gsub(/\w+=""/,'')              # Remove empty attributes
+      @optimized.gsub!(/\w+=""/,'') # Remove empty attributes
     end
 
-    def set_attributes
+    def symbolize( str )
+      strip_attributes( str )
+        .gsub(/<\/svg/,'</symbol')      # Replace svgs with symbols
+        .gsub(/\w+=""/,'')              # Remove empty attributes
+        .sub(/<svg/, "<symbol #{attributes(attr)}")
+    end
+
+    def strip_attributes( str )
       attr.keys.each do |key|
-        @optimized.sub!(/ #{key}=".+?"/,'')
+        str.sub!(/ #{key}=".+?"/,'')
       end
 
-      @optimized.sub(/<svg/, "<symbol #{attributes(attr)}")
+      str
     end
 
     # Scans <def> blocks for IDs

@@ -80,9 +80,9 @@ module Esvg
         defs = @symbols.map(&:defs).compact.join
         defs = "<defs>#{defs}</defs>" unless defs.empty?
 
-        optimized = @symbols.map(&:optimize).join.gsub("\n",'')
+        symbols = @symbols.map(&:symbol).join.gsub("\n",'')
 
-        @svg = %Q{<svg id="esvg-#{id}" #{attributes(attr)} data-turbolinks-permanent>#{defs}#{optimized}</svg>}
+        @svg = %Q{<svg id="esvg-#{id}" #{attributes(attr)} data-turbolinks-permanent>#{defs}#{symbols}</svg>}
       end
     end
 

@@ -52,9 +52,13 @@ module Esvg
   def new(options={})
     @svgs ||=[]
     c = config(options)
+
+    # If the source path is the same continue
+    # Otherwise add a new SVG group for this path
     unless @svgs.find { |s| s.config[:source] == c[:source] }
       @svgs << Svgs.new(c)
     end
+
     @svgs.last
   end
 
