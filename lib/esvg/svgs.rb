@@ -9,25 +9,42 @@ module Esvg
     include Esvg::Utils
 
     attr_reader :symbols
-    attr_reader :config
 
     def initialize(options={})
       @config = options
       @symbols = []
       @svgs = []
-      @last_read = 0
+      @files_loaded = 0
       read_cache
 
       load_files
     end
 
+    def config
+      # use cached configuration
+      if !Esvg.rails_production? && config_expired? && config_changed?
+        puts "LOADING CONFIG"
+        @config = Esvg.update_config( @config )
+      else
+        @config
+      end
+    end
+
+    def config_expired?
+      @config[:throttle_read] < (Time.now.to_i - @config[:read])
+    end
+
+    def config_changed?
+      @config[:config_file] && @config[:read] < File.mtime( @config[:config_file] ).to_i
+    end
+
     def load_files
-      return if (Time.now.to_i - @last_read) < config[:throttle_read]
+      return if @config[:throttle_read] < (Time.now.to_i - @files_loaded)
 
-      files = Dir[File.join(config[:source], '**/*.svg')].uniq.sort
+      files = Dir[File.join(@config[:source], '**/*.svg')].uniq.sort
 
-      if files.empty? && config[:print]
-        puts "No svgs found at #{config[:source]}"
+      if files.empty? && @config[:print]
+        puts "No svgs found at #{@config[:source]}"
         return
       end
 
@@ -36,19 +53,19 @@ module Esvg
 
       files.each do |path|
         unless @symbols.find { |s| s.path == path }
-          @symbols << Symbol.new(path, config)
+          @symbols << Symbol.new(path, self)
         end
       end
 
       @svgs.clear
 
       sort(@symbols.group_by(&:group)).each do |name, symbols|
-        @svgs << Svg.new(name, symbols, config)
+        @svgs << Svg.new(name, symbols, self)
       end
 
-      @last_read = Time.now.to_i
+      @files_loaded = Time.now.to_i
 
-      puts "Read #{@symbols.size} files from #{config[:source]}" if config[:print]
+      puts "Read #{@symbols.size} files from #{@config[:source]}" if @config[:print]
 
     end
 
@@ -56,8 +73,8 @@ module Esvg
 
       paths = []
 
-      if config[:core]
-        path = File.join config[:assets], "_esvg.js"
+      if @config[:core]
+        path = File.join @config[:assets], "_esvg.js"
         write_file path, js_core
         paths << path
       end
@@ -65,11 +82,11 @@ module Esvg
       @svgs.each do |file|
         write_file file.path, js(file.embed)
 
-        puts "Writing #{file.path}" if config[:print]
+        puts "Writing #{file.path}" if @config[:print]
         paths << file.path
 
-        if !file.asset && config[:gzip] && gz = compress(file.path)
-          puts "Writing #{gz}" if config[:print]
+        if !file.asset && @config[:gzip] && gz = compress(file.path)
+          puts "Writing #{gz}" if @config[:print]
           paths << gz
         end
       end
@@ -79,20 +96,20 @@ module Esvg
     end
 
     def write_cache
-      puts "Writing cache" if config[:print]
-      write_tmp config[:cache_file], @symbols.map(&:data).to_yaml
+      puts "Writing cache" if @config[:print]
+      write_tmp @config[:cache_file], @symbols.map(&:data).to_yaml
     end
 
     def read_cache
-      (YAML.load(read_tmp config[:cache_file]) || []).each do |c|
-        config[:cache] = c
-        @symbols << Symbol.new(c[:path], config)
+      (YAML.load(read_tmp @config[:cache_file]) || []).each do |c|
+        @config[:cache] = c
+        @symbols << Symbol.new(c[:path], self)
       end
     end
 
     # Embed svg symbols
     def embed_script(names=nil)
-      if Esvg.rails? && Rails.env.production?
+      if Esvg.rails_production?
         embeds = buildable_svgs(names).map(&:embed)
       else
         embeds = find_svgs(names).map(&:embed)
@@ -107,7 +124,7 @@ module Esvg
     end
 
     def cache_stale?
-      path = File.join(config[:temp], config[:cache_file])
+      path = File.join(@config[:temp], @config[:cache_file])
 
       # No cache file exists or cache file is older than a new symbol
       !File.exist?(path) || @symbols.size > 0 && File.mtime(path).to_i < @symbols.map(&:mtime).sort.last
@@ -119,7 +136,7 @@ module Esvg
 
     def find_symbol(name, fallback=nil)
       # Ensure that file changes are picked up in development
-      load_files unless Esvg.rails? && Rails.env.production?
+      load_files unless Esvg.rails_production?
 
       name = get_alias dasherize(name)
 
@@ -177,7 +194,7 @@ module Esvg
   }
 
   function svgName( name ) {
-    return "#{config[:prefix]}-"+dasherize( name )
+    return "#{@config[:prefix]}-"+dasherize( name )
   }
 
   function use( name, options ) {
@@ -239,18 +256,18 @@ module Esvg
     end
 
     def get_alias(name)
-      config[:aliases][dasherize(name).to_sym] || name
+      @config[:aliases][dasherize(name).to_sym] || name
     end
 
     def write_tmp(name, content)
-      path = File.join(config[:temp], name)
+      path = File.join(@config[:temp], name)
       FileUtils.mkdir_p(File.dirname(path))
       write_file path, content
       path
     end
 
     def read_tmp(name)
-      path = File.join(config[:temp], name)
+      path = File.join(@config[:temp], name)
       if File.exist? path
         File.read path
       else

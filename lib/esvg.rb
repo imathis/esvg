@@ -79,7 +79,9 @@ module Esvg
   end
 
   def embed(names=nil)
-    html_safe find_svgs(names).map{|s| s.embed_script(names) }.join
+    html_safe( find_svgs(names).map{ |s| 
+      s.embed_script(names) 
+    }.join )
   end
 
   def build_paths(names=nil)
@@ -108,13 +110,18 @@ module Esvg
     defined?(Rails) || File.exist?("./bin/rails")
   end
 
+  def rails_production?
+    rails? && Rails.env.production?
+  end
+
   def html_safe(input)
     input = input.html_safe if rails?
     input
   end
 
+  # Add SVG build task to `rake assets:precompile`
   def precompile_assets
-    if defined?(Rails) && Rails.env.production? && defined?(Rake)
+    if rails_production? && defined?(Rake)
       ::Rake::Task['assets:precompile'].enhance do
         new(gzip: true, print: true).build
       end
@@ -161,14 +168,17 @@ module Esvg
 
     config = CONFIG.dup
 
-    if Esvg.rails? || options[:rails]
+    if rails? || options[:rails]
       config.merge!(CONFIG_RAILS)
     elsif defined?(Jekyll)
       config.merge!(CONFIG_JEKYLL)
     end
 
     if path = paths.select{ |p| File.exist?(p)}.first
+      options[:config_file] = path
       config.merge!(deep_symbolize_keys(YAML.load(File.read(path) || {})))
+    else
+      options[:config_file] = false
     end
 
     config.merge!(options)
@@ -189,9 +199,14 @@ module Esvg
     config[:temp]     = File.expand_path File.join(config[:temp], '.esvg-cache')
 
     config[:aliases] = load_aliases(config[:alias])
-    config[:flatten] = [config[:flatten]].flatten.map { |dir| File.join(dir, '/') }.join('|')
+    config[:flatten_dir] = [config[:flatten]].flatten.map { |dir| File.join(dir, '/') }.join('|')
+    config[:read] = Time.now.to_i
 
     config
+  end
+
+  def update_config ( options )
+    config( { config_file: options[:config_file] } )
   end
   
   # Load aliases from configuration.

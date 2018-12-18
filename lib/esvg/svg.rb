@@ -7,19 +7,23 @@ module Esvg
 
     attr_reader :asset, :vesion, :name
 
-    def initialize(name, symbols, config={})
+    def initialize(name, symbols, parent)
+      @parent = parent
       @name = name
-      @config = config
       @symbols = symbols
       @symbol_defs = []
       @asset = File.basename(name).start_with?('_')
-      @version = @config[:version] || Digest::MD5.hexdigest(symbols.map(&:mtime).join)
+      @version = parent.config[:version] || Digest::MD5.hexdigest(symbols.map(&:mtime).join)
     end
 
     def embed
       %Q{if (!document.querySelector('#esvg-#{id}')) {
       document.querySelector('body').insertAdjacentHTML('afterbegin', '#{svg}')
     }}
+    end
+
+    def config
+      @parent.config
     end
 
     def named?(names=[])
@@ -32,7 +36,7 @@ module Esvg
       if @name == '.'
         'symbols'
       else
-        dasherize "#{@config[:prefix]}-#{name_key}"
+        dasherize "#{config[:prefix]}-#{name_key}"
       end
     end
 
@@ -41,14 +45,14 @@ module Esvg
         name = name_key
 
         if name.start_with?('_') # Is it an asset?
-          File.join @config[:assets], "#{name}.js"
+          File.join config[:assets], "#{name}.js"
         else # or a build file?
 
           # User doesn't want a fingerprinted build file and hasn't set a version
-          if !@config[:fingerprint] && !@config[:version]
-            File.join @config[:build], "#{name}.js"
+          if !config[:fingerprint] && !config[:version]
+            File.join config[:build], "#{name}.js"
           else
-            File.join @config[:build], "#{name}-#{@version}.js"
+            File.join config[:build], "#{name}-#{@version}.js"
           end
         end
       end
@@ -58,9 +62,9 @@ module Esvg
 
     def name_key
       if @name == '_'  # Root level asset file
-        "_#{@config[:filename]}".sub(/_+/, '_')
+        "_#{config[:filename]}".sub(/_+/, '_')
       elsif @name == '.'      # Root level build file
-        @config[:filename]
+        config[:filename]
       else
         @name
       end
@@ -71,8 +75,8 @@ module Esvg
         @svg
       else
         attr = {
-          "data-symbol-class" => @config[:class],
-          "data-prefix" => @config[:prefix],
+          "data-symbol-class" => config[:class],
+          "data-prefix" => config[:prefix],
           "version" => "1.1",
           "style" => "height:0;position:absolute"
         }

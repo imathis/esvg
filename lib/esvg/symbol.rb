@@ -6,12 +6,16 @@ module Esvg
 
     include Esvg::Utils
 
-    def initialize(path, config={})
-      @config  = config
+    def initialize(path, parent)
+      @parent  = parent
       @path    = path
       @last_checked = 0
       load_data
       read
+    end
+
+    def config
+      @parent.config
     end
 
     def read
@@ -102,12 +106,12 @@ module Esvg
     def use(options={})
       
       # If preset key is set, merge presets from configuration
-      if options[:preset] && preset = @config[:presets][ options.delete(:preset).to_sym ]
+      if options[:preset] && preset = config[:presets][ options.delete(:preset).to_sym ]
         options = options.merge( preset )
       end
 
       # If size key is set, merge size class from configuration
-      if options[:size] && size_class = @config[:sizes][ options.delete(:size).to_sym ]
+      if options[:size] && size_class = config[:sizes][ options.delete(:size).to_sym ]
         options = options.merge( size_class )
       end
 
@@ -124,7 +128,7 @@ module Esvg
       use_attr = options.delete(:use) || {}
 
       svg_attr = {
-        class: [@config[:class], @config[:prefix]+"-"+@name, options.delete(:class)].compact.join(' '),
+        class: [config[:class], config[:prefix]+"-"+@name, options.delete(:class)].compact.join(' '),
         viewBox: @size[:viewBox],
         role: 'img'
       }.merge(options)
@@ -143,7 +147,7 @@ module Esvg
     def use_tag(options={})
       options["xlink:href"] = "##{@id}"
 
-      if options[:scale] && @config[:scale]
+      if options[:scale] && config[:scale]
         # User doesn't want dimensions to be set
         options.delete(:scale)
       else
@@ -157,7 +161,7 @@ module Esvg
     end
 
     def svgo?
-      @config[:optimize] && !!Esvg.node_module('svgo')
+      config[:optimize] && !!Esvg.node_module('svgo')
     end
 
     def optimize
@@ -192,15 +196,15 @@ module Esvg
     private
 
     def load_data
-      if @config[:cache]
-        @config.delete(:cache).each do |name, value|
+      if config[:cache]
+        config.delete(:cache).each do |name, value|
           instance_variable_set("@#{name}", value)
         end
       end
     end
 
     def last_modified
-      if Time.now.to_i - @last_checked < @config[:throttle_read]
+      if Time.now.to_i - @last_checked < config[:throttle_read]
         @last_modified
       else
         @last_checked = Time.now.to_i
@@ -209,11 +213,11 @@ module Esvg
     end
 
     def file_id(name)
-      dasherize "#{@config[:prefix]}-#{name}"
+      dasherize "#{config[:prefix]}-#{name}"
     end
 
     def local_path
-      @local_path ||= sub_path(@config[:source], @path)
+      @local_path ||= sub_path(config[:source], @path)
     end
 
     def file_name
@@ -230,7 +234,7 @@ module Esvg
       # Flattened paths which should be treated as assets will use '_' as their dir key
       # - flatten: _foo - _foo/icon.svg will have a dirkey of _
       # - filename: _icons - treats all root or flattened files as assets
-      if dir == '.' && ( local_path.start_with?('_') || @config[:filename].start_with?('_') )
+      if dir == '.' && ( local_path.start_with?('_') || config[:filename].start_with?('_') )
         '_'
       else
         dir
@@ -238,14 +242,14 @@ module Esvg
     end
 
     def flatten_path
-      @flattened_path ||= local_path.sub(Regexp.new(@config[:flatten]), '')
+      @flattened_path ||= local_path.sub(Regexp.new(config[:flatten_dir]), '')
     end
 
     def name_key(key)
       if key == '_'  # Root level asset file
-        "_#{@config[:filename]}".sub(/_+/, '_')
+        "_#{config[:filename]}".sub(/_+/, '_')
       elsif key == '.'      # Root level build file
-        @config[:filename]
+        config[:filename]
       else
         "#{key}"
       end
