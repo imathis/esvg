@@ -23,7 +23,7 @@ module Esvg
     def config
       # use cached configuration
       if !Esvg.rails_production? && config_expired? && config_changed?
-        puts "LOADING CONFIG"
+        puts "Reloading ESVG config: #{@config[:config_file]}" if @config[:print]
         @config = Esvg.update_config( @config )
       else
         @config
