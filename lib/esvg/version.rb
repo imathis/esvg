@@ -1,3 +1,3 @@
 module Esvg
-  VERSION = "4.6.2"
+  VERSION = "4.6.3"
 end

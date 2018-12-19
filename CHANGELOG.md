@@ -1,5 +1,14 @@
 # Changelog
 
+### 4.6.3 (2018-12-19)
+- Fix: Reworked configuration model, fixing build optimization failures.
+
+### 4.6.2 (2018-12-18)
+- New: Config is reloaded on change in development mode (Rails, Jekyll)
+
+### 4.6.1 (2018-12-17)
+- New: Embeds All Svgs in development mode (making reubilding after change unnecessary)
+
 ### 4.6.0 (2018-12-12)
 - New: `presets` configuration. Configure `presets: { icon: { height: '1em', fill: 'currentColor' }}` in esvg.yml and set option `preset: 'icon'` to apply these defaults options.
 - New: `sizes` configuration. Configure `sizes: { sm: { height: '10px' }, med: { height: '14px' }, … }` in esvg.yml and set option `size: 'sm'` to add load those size configuration options.
