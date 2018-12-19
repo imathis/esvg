@@ -8,6 +8,7 @@ require 'esvg'
 options = {
   core: false,
   fingerprint: false,
+  cli: true
 }
 
 OptionParser.new do |opts|

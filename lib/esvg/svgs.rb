@@ -14,20 +14,27 @@ module Esvg
       @config = options
       @symbols = []
       @svgs = []
-      @files_loaded = 0
       read_cache
 
       load_files
     end
 
+    def production?
+      @config[:env] == 'production'
+    end
+
     def config
       # use cached configuration
-      if !Esvg.rails_production? && config_expired? && config_changed?
-        puts "Reloading ESVG config: #{@config[:config_file]}" if @config[:print]
+      if !production? && config_expired? && config_changed?
+        puts "Reloading ESVG config: #{print_path( @config[:config_file] )}" if @config[:print]
         @config = Esvg.update_config( @config )
       else
         @config
       end
+    end
+
+    def print_path( path )
+      sub_path( @config[:root], path )
     end
 
     def config_expired?
@@ -38,34 +45,44 @@ module Esvg
       @config[:config_file] && @config[:read] < File.mtime( @config[:config_file] ).to_i
     end
 
+    def loaded_recently?
+      @last_load && (Time.now.to_i - @last_load) < @config[:throttle_read]
+    end
+
     def load_files
-      return if @config[:throttle_read] < (Time.now.to_i - @files_loaded)
+      return if loaded_recently?
 
-      files = Dir[File.join(@config[:source], '**/*.svg')].uniq.sort
+      files        = Dir[File.join(@config[:source], '**/*.svg')].uniq.sort
+      size_before  = @symbols.size
+      added        = []
+      removed      = []
 
-      if files.empty? && @config[:print]
-        puts "No svgs found at #{@config[:source]}"
-        return
-      end
-
-      # Remove deleted files
-      @symbols.reject(&:read).each { |s| @symbols.delete(s) }
+      # Remove all files which no longer exist
+      @symbols.reject(&:exist?).each { |s| 
+        removed.push @symbols.delete(s) 
+      }
 
       files.each do |path|
         unless @symbols.find { |s| s.path == path }
           @symbols << Symbol.new(path, self)
+          added.push @symbols.last
         end
+      end
+
+      if @config[:print]
+        puts %Q{Read #{files.size} SVGs from #{print_path( @config[:source] )}}
+        puts %Q{  Added: #{added.size} SVG#{'s' if added.size != 1} } if added.size > 0 
+        puts %Q{  Removed: #{removed.size} SVG#{'s' if removed.size != 1} } if removed.size > 0 
       end
 
       @svgs.clear
 
-      sort(@symbols.group_by(&:group)).each do |name, symbols|
+      sort(@symbols.group_by(&:dir)).each do |name, symbols|
         @svgs << Svg.new(name, symbols, self)
       end
 
-      @files_loaded = Time.now.to_i
-
-      puts "Read #{@symbols.size} files from #{@config[:source]}" if @config[:print]
+      @last_load = Time.now.to_i
+      write_cache if cache_stale?
 
     end
 
@@ -82,11 +99,11 @@ module Esvg
       @svgs.each do |file|
         write_file file.path, js(file.embed)
 
-        puts "Writing #{file.path}" if @config[:print]
+        puts "Writing #{print_path( file.path )}" if @config[:print]
         paths << file.path
 
         if !file.asset && @config[:gzip] && gz = compress(file.path)
-          puts "Writing #{gz}" if @config[:print]
+          puts "Writing #{print_path( gz )}" if @config[:print]
           paths << gz
         end
       end
@@ -96,12 +113,12 @@ module Esvg
     end
 
     def write_cache
-      puts "Writing cache" if @config[:print]
+      puts "Writing cache: #{ print_path( File.join( @config[:temp], @config[:cache_file]) )}" if @config[:print]
       write_tmp @config[:cache_file], @symbols.map(&:data).to_yaml
     end
 
     def read_cache
-      (YAML.load(read_tmp @config[:cache_file]) || []).each do |c|
+      (YAML.load(read_tmp(@config[:cache_file])) || []).each do |c|
         @config[:cache] = c
         @symbols << Symbol.new(c[:path], self)
       end
@@ -109,7 +126,7 @@ module Esvg
 
     # Embed svg symbols
     def embed_script(names=nil)
-      if Esvg.rails_production?
+      if production?
         embeds = buildable_svgs(names).map(&:embed)
       else
         embeds = find_svgs(names).map(&:embed)
@@ -136,7 +153,7 @@ module Esvg
 
     def find_symbol(name, fallback=nil)
       # Ensure that file changes are picked up in development
-      load_files unless Esvg.rails_production?
+      load_files unless production?
 
       name = get_alias dasherize(name)
 

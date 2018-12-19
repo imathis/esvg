@@ -18,12 +18,20 @@ module Esvg
       @parent.config
     end
 
+    def exist?
+      File.exist?(@path)
+    end
+
+    def dir
+      @group
+    end
+
     def read
-      return if !File.exist?(@path)
+      return if !exist?
 
       # Ensure that cache optimization matches current optimization settings
       # If config has changed name, reset optimized build (name gets baked in)
-      if changed? || @svgo_optimized != svgo? || name != file_name
+      if changed? || @svgo_optimized != optimize? || name != file_name
         @optimized = nil
         @optimized_at = nil
       end
@@ -95,7 +103,7 @@ module Esvg
         defs: @defs,
         optimized: @optimized,
         optimized_at: @optimized_at,
-        svgo_optimized: svgo? && @svgo_optimized
+        svgo_optimized: optimize? && @svgo_optimized
       }
     end
 
@@ -160,17 +168,26 @@ module Esvg
       %Q{<use #{attributes(options)}></use>}
     end
 
-    def svgo?
-      config[:optimize] && !!Esvg.node_module('svgo')
+    # Only optimize if
+    # - Configuration asks for it
+    # - SVGO is present
+    # - If Rails is present 
+    def optimize?
+      config[:optimize] && !!Esvg.node_module('svgo') && config[:env] == 'production'
     end
 
     def optimize
       read if changed?
 
       # Only optimize again if the file has changed
-      return @optimized if @optimized && @optimized_at && @optimized_at > @mtime
+      if @optimized && @optimized_at && @optimized_at > @mtime
+        return @optimized
+      end
 
-      if svgo?
+      # Only optimize if SVGO is installed
+      if optimize?
+        puts "Optimizing #{name}.svg" if config[:print]
+
         response = Open3.capture3(%Q{#{Esvg.node_module('svgo')} --disable=removeUselessDefs -s '#{@content}' -o -})
         if !response[0].empty? && response[2].success?
           @optimized = response[0]

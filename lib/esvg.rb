@@ -49,6 +49,7 @@ module Esvg
   extend self
 
   include Esvg::Utils
+
   def new(options={})
     @svgs ||=[]
     c = config(options)
@@ -110,10 +111,6 @@ module Esvg
     defined?(Rails) || File.exist?("./bin/rails")
   end
 
-  def rails_production?
-    rails? && Rails.env.production?
-  end
-
   def html_safe(input)
     input = input.html_safe if rails?
     input
@@ -121,9 +118,9 @@ module Esvg
 
   # Add SVG build task to `rake assets:precompile`
   def precompile_assets
-    if rails_production? && defined?(Rake)
+    if rails? && defined?(Rake)
       ::Rake::Task['assets:precompile'].enhance do
-        new(gzip: true, print: true).build
+        svgs.map(&:build)
       end
     end
   end
@@ -170,37 +167,46 @@ module Esvg
 
     if rails? || options[:rails]
       config.merge!(CONFIG_RAILS)
+      config[:env] ||= Rails.env
     elsif defined?(Jekyll)
       config.merge!(CONFIG_JEKYLL)
-    end
-
-    if path = paths.select{ |p| File.exist?(p)}.first
-      options[:config_file] = path
-      config.merge!(deep_symbolize_keys(YAML.load(File.read(path) || {})))
-    else
-      options[:config_file] = false
+      config[:env] ||= Jekyll.env
     end
 
     config.merge!(options)
 
-    if defined? Jekyll
-      config[:build] = File.join(config[:destination], config[:build])
-      config[:source] = File.join(config[:source_dir], config[:source])
+    if path = paths.select{ |p| File.exist?(p)}.first
+      options[:config_file] = path
+      config.merge!(deep_symbolize_keys(YAML.load(File.read(path) || {})))
+
+      # Allow CLI passed options to override config file
+      config.merge!(options) if options[:cli]
+    else
+      options[:config_file] = false
     end
 
-    config[:filename] = File.basename(config[:filename], '.*')
+    if defined? Jekyll
+      config[:build]     = File.join(config[:destination], config[:build])
+      config[:source]    = File.join(config[:source_dir], config[:source])
+    end
 
-    config[:pwd]      = File.expand_path Dir.pwd
-    config[:source]   = File.expand_path config[:source] || config[:pwd]
-    config[:build]    = File.expand_path config[:build]  || config[:pwd]
-    config[:assets]   = File.expand_path config[:assets] || config[:pwd]
+    config[:filename]    = File.basename(config[:filename], '.*')
 
-    config[:temp]     = config[:pwd] if config[:temp].nil?
-    config[:temp]     = File.expand_path File.join(config[:temp], '.esvg-cache')
+    config[:pwd]         = File.expand_path Dir.pwd
+    config[:source]      = File.expand_path config[:source] || config[:pwd]
+    config[:build]       = File.expand_path config[:build]  || config[:pwd]
+    config[:assets]      = File.expand_path config[:assets] || config[:pwd]
+    config[:root]      ||= config[:pwd] # For relative paths on print
 
-    config[:aliases] = load_aliases(config[:alias])
+    config[:temp]        = config[:pwd] if config[:temp].nil?
+    config[:temp]        = File.expand_path( File.join(config[:temp], '.esvg-cache') )
+
+    config[:aliases]     = load_aliases(config[:alias])
     config[:flatten_dir] = [config[:flatten]].flatten.map { |dir| File.join(dir, '/') }.join('|')
-    config[:read] = Time.now.to_i
+    config[:read]        = Time.now.to_i
+    config[:env]       ||= 'development'
+    config[:print]     ||= true unless config[:env] == 'production'
+    config[:optimize]    = true if config[:env] == 'production'
 
     config
   end

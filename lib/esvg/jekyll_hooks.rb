@@ -9,7 +9,7 @@ Jekyll::Hooks.register :site, :post_read do |site|
   site.exclude.push '.esvg-cache'
   config = {
     source_dir: site.config['source'], 
-    destination: site.config['destination']  
+    destination: site.config['destination']
   }.merge site.config["esvg"] || {}
 
   Jekyll.esvg = Esvg.seed_cache(config)
