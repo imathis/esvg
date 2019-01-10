@@ -1,0 +1,14 @@
+(function(){
+
+  function embed() {
+    if ( !document.body ) return requestAnimationFrame( embed )
+    <%= @embed %>
+  }
+
+  // Handle Turbolinks page change events
+  if ( window.Turbolinks ) {
+    document.addEventListener("turbolinks:load", function(event) { embed() })
+  }
+
+  embed()
+})()

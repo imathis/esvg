@@ -176,100 +176,23 @@ module Esvg
 
     private
 
-    def js(embed)
-      %Q{(function(){
+    def read_js(path)
+      contents = ''
+      path = File.expand_path("js/#{path}.js.erb", File.dirname(__FILE__))
 
-  function embed() {
-    #{embed}
-  }
+      File.open path do |f|
+        contents = ERB.new(f.read).result(binding)
+      end
+      contents
+    end
 
-  // If DOM is already ready, embed SVGs
-  if (document.readyState == 'interactive') { embed() }
-
-  // Handle Turbolinks page change events
-  if ( window.Turbolinks ) {
-    document.addEventListener("turbolinks:load", function(event) { embed() })
-  }
-
-  // Handle standard DOM ready events
-  document.addEventListener("DOMContentLoaded", function(event) { embed() })
-})()}
+    def js( embed )
+      @embed = embed
+      read_js( 'embed' )
     end
 
     def js_core
-      %Q{(function(){
-  var names
-
-  function attr( source, name ){
-    if (typeof source == 'object')
-      return name+'="'+source.getAttribute(name)+'" '
-    else
-      return name+'="'+source+'" ' }
-
-  function dasherize( input ) {
-    return input.replace(/[\\W,_]/g, '-').replace(/-{2,}/g, '-')
-  }
-
-  function svgName( name ) {
-    return "#{@config[:prefix]}-"+dasherize( name )
-  }
-
-  function use( name, options ) {
-    options = options || {}
-    var id = dasherize( name )
-    var symbol = svgs()[id]
-
-    if ( symbol ) {
-      var parent = symbol.parentElement
-      var prefix = parent.dataset.prefix
-      var base   = parent.dataset.symbolClass
-
-      var svg = document.createRange().createContextualFragment( '<svg><use xlink:href="#' + prefix + '-' + id + '"/></svg>' ).firstChild;
-      svg.setAttribute( 'class', base + ' ' + prefix + '-' + id + ' ' + ( options.class || '' ).trim() )
-      svg.setAttribute( 'viewBox', symbol.getAttribute( 'viewBox' ) )
-
-      if ( !( options.width || options.height || options.scale ) ) {
-
-        svg.setAttribute('width',  symbol.getAttribute('width'))
-        svg.setAttribute('height', symbol.getAttribute('height'))
-
-      } else {
-
-        if ( options.width )  svg.setAttribute( 'width',  options.width )
-        if ( options.height ) svg.setAttribute( 'height', options.height )
-      }
-
-      return svg
-    } else {
-      console.error('Cannot find "'+name+'" svg symbol. Ensure that svg scripts are loaded')
-    }
-  }
-
-  function svgs(){
-    if ( !names ) {
-      names = {}
-      var symbols = Array.prototype.slice.call( document.querySelectorAll( 'svg[id^=esvg] symbol' ) )
-      symbols.forEach( function( symbol ) {
-        names[symbol.dataset.name] = symbol
-      })
-    }
-    return names
-  }
-
-  var esvg = {
-    svgs: svgs,
-    use: use
-  }
-
-  // Handle Turbolinks page change events
-  if ( window.Turbolinks ) {
-    document.addEventListener( "turbolinks:load", function( event ) { names = null; esvg.svgs() })
-  }
-
-  if( typeof( module ) != 'undefined' ) { module.exports = esvg }
-  else window.esvg = esvg
-
-})()}
+      read_js( 'core' )
     end
 
     def get_alias(name)
