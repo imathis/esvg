@@ -1,5 +1,9 @@
 # Changelog
 
+### 4.6.4 (2018-01-10)
+- JS files now load via ERB for code readability.
+- Embed of SVGs is now triggered by document.body existing using requestAnimationFrame.  DomContentLoaded wasn't fast enough for some cases. 
+
 ### 4.6.3 (2018-12-19)
 - Fix: Reworked configuration model, fixing build optimization failures.
 
