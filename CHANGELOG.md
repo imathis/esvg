@@ -1,5 +1,8 @@
 # Changelog
 
+### 4.6.5 (2018-01-10)
+- Fix: If a viewbox is missing, Esvg recontstructs it from width and height parameters.
+
 ### 4.6.4 (2018-01-10)
 - JS files now load via ERB for code readability.
 - Embed of SVGs is now triggered by document.body existing using requestAnimationFrame.  DomContentLoaded wasn't fast enough for some cases. 

@@ -59,8 +59,12 @@ module Esvg
 
     # Scale width based on propotion to height
     def scale_width( h )
-      s = split_unit( h )
-      "#{( s[:size] / height * width ).round(2)}#{s[:unit]}"
+      begin
+        s = split_unit( h )
+        "#{( s[:size] / height * width ).round(2)}#{s[:unit]}"
+      rescue StandardError
+        binding.pry
+      end
     end
 
     # Scale height based on propotion to width
@@ -282,7 +286,17 @@ module Esvg
           height: (coords[3].to_i - coords[1].to_i).abs
         }
       else
-        {}
+        # In case a viewbox hasn't been set, derive one.
+        if height = @content.scan(/<svg.+(height=["'](.+?)["'])/).flatten.last &&
+           width = @content.scan(/<svg.+(width=["'](.+?)["'])/).flatten.last
+          {
+            viewBox: "0 0 #{width} #{height}",
+            width: width.to_i,
+            height: height.to_i
+          }
+        else
+          {}
+        end
       end
     end
 
