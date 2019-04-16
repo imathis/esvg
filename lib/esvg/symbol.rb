@@ -59,12 +59,8 @@ module Esvg
 
     # Scale width based on propotion to height
     def scale_width( h )
-      begin
-        s = split_unit( h )
-        "#{( s[:size] / height * width ).round(2)}#{s[:unit]}"
-      rescue StandardError
-        binding.pry
-      end
+      s = split_unit( h )
+      "#{( s[:size] / height * width ).round(2)}#{s[:unit]}"
     end
 
     # Scale height based on propotion to width

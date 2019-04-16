@@ -1,6 +1,9 @@
 # Changelog
 
-### 4.6.5 (2018-01-10)
+### 4.6.6 (2019-04-16)
+- Fix: Removed debug fragment
+
+### 4.6.5 (2018-04-16)
 - Fix: If a viewbox is missing, Esvg recontstructs it from width and height parameters.
 
 ### 4.6.4 (2018-01-10)
