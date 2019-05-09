@@ -69,7 +69,7 @@ module Esvg
         end
       end
 
-      if @config[:print]
+      if @config[:debug]
         puts %Q{Read #{files.size} SVGs from #{print_path( @config[:source] )}}
         puts %Q{  Added: #{added.size} SVG#{'s' if added.size != 1} } if added.size > 0 
         puts %Q{  Removed: #{removed.size} SVG#{'s' if removed.size != 1} } if removed.size > 0 
@@ -87,7 +87,6 @@ module Esvg
     end
 
     def build
-
       paths = []
 
       if @config[:core]
@@ -113,15 +112,24 @@ module Esvg
     end
 
     def write_cache
-      puts "Writing cache: #{ print_path( File.join( @config[:temp], @config[:cache_file]) )}" if @config[:print]
+      puts "Writing cache: #{ print_path( File.join( @config[:temp], @config[:cache_file]) )}" if @config[:debug]
       write_tmp @config[:cache_file], @symbols.map(&:data).to_yaml
     end
 
     def read_cache
-      (YAML.load(read_tmp(@config[:cache_file])) || []).each do |c|
+      return unless cache = read_tmp(@config[:cache_file])
+
+      YAML.load(cache).each do |c|
+
+        # Only read cache data which matches this source
+        # Example: Cache data from previous gem versions shouldn't be loaded
+        next unless c[:path].include?(@config[:source])
+
         @config[:cache] = c
         @symbols << Symbol.new(c[:path], self)
       end
+
+      @reset_cache = cache.size != @symbols.size
     end
 
     # Embed svg symbols
@@ -132,7 +140,7 @@ module Esvg
         embeds = find_svgs(names).map(&:embed)
       end
 
-      write_cache if cache_stale?
+      write_cache if !production? && cache_stale?
 
       if !embeds.empty?
         "<script>#{js(embeds.join("\n"))}</script>"
@@ -144,7 +152,7 @@ module Esvg
       path = File.join(@config[:temp], @config[:cache_file])
 
       # No cache file exists or cache file is older than a new symbol
-      !File.exist?(path) || @symbols.size > 0 && File.mtime(path).to_i < @symbols.map(&:mtime).sort.last
+      !File.exist?(path) || @reset_cache || @symbols.size > 0 && File.mtime(path).to_i < @symbols.map(&:mtime).sort.last
     end
 
     def build_paths(names=nil)
@@ -208,11 +216,7 @@ module Esvg
 
     def read_tmp(name)
       path = File.join(@config[:temp], name)
-      if File.exist? path
-        File.read path
-      else
-        ''
-      end
+      File.read path if File.exist? path
     end
 
     def write_file(path, contents)

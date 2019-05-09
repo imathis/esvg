@@ -24,6 +24,8 @@ CONFIG = {
   gzip: false,
   scale: false,
   fingerprint: true,
+  debug: false,
+  print: false,
   throttle_read: 4,
   flatten: [],
   alias: {},
