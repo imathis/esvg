@@ -237,7 +237,7 @@ module Esvg
   end
 
   def dasherize(input)
-    input.gsub(/[\W,_]/, '-').sub(/^-/,'').gsub(/-{2,}/, '-')
+    input.to_s.strip.gsub(/[\W,_]+/, '-')
   end
 
 end

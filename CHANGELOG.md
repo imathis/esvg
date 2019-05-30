@@ -1,5 +1,8 @@
 # Changelog
 
+### 4.6.8 (2019-05-30)
+- Fix: Support symbols for svg names.
+
 ### 4.6.6 (2019-04-16)
 - Fix: Removed debug fragment
 

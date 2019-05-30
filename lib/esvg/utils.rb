@@ -1,7 +1,7 @@
 module Esvg
   module Utils
     def dasherize(input)
-      input.gsub(/[\W,_]/, '-').sub(/^-/,'').gsub(/-{2,}/, '-')
+      Esvg.dasherize(input)
     end
 
     def sub_path(root, path)
