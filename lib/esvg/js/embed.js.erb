@@ -4,11 +4,10 @@
     if ( !document.body ) return requestAnimationFrame( embed )
     <%= @embed %>
   }
-
+  <% if @config[:xhr_event] %>
   // Handle Turbolinks page change events
-  if ( window.Turbolinks ) {
-    document.addEventListener("turbolinks:load", function(event) { embed() })
-  }
+  document.addEventListener("<%= @config[:xhr_event] %>", embed)
+  <% end %>
 
   embed()
 })()

@@ -3,6 +3,7 @@ require 'json'
 require 'zlib'
 require 'digest'
 require 'esvg/symbol'
+require 'erb'
 
 module Esvg
   class Svgs

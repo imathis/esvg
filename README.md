@@ -49,9 +49,31 @@ Add this to a page or layout where SVGs should be available
 <%= embed_svgs %>
 ```
 
-**During development:**
+### XHR page content
 
-This will embed a `<script>` which will place svg symbols at the top of your site's `<body>` as soon as the DOM is ready, and after any Turbolinks page load events.
+If page content is loaded after `domready` and replaces the content of `<body>`, you can register an event listener
+by configuring `xhr_event` in esvg's configuration file to re-embed icons if they have been removed.
+
+For example in the Rails community, Turbolinks is a popular system for loading page content with XHR. After it has
+finished its work, it fires a `turbolinks:load` event. If you're using Turbolinks, you'd set `xhr_event` as
+follows.
+
+```yaml
+xhr_event: "turbolinks:load"
+```
+
+Which add an the following event listener to esvg's embed script.
+
+```javascript
+document.addEventListener("turbolinks:load", embed)`
+```
+
+This will trigger the embed script, addding the symbols to the top of the `<body>` if they were removed in a page
+transition.
+
+**During Development:**
+
+This will embed a `<script>` which will place svg symbols at the top of your site's `<body>` as soon as the DOM is ready.
 
 **In Production:**
 
@@ -120,6 +142,8 @@ $ esvg -c --config foo.yml  # Read confguration from foo.yml (otherwise, default
 
 ## Configuration
 
+If using Rails, add a configuration file at `config/esvg.yml`.
+
 If you're using esvg from the command line, configuration files are read from `./esvg.yml` or you can pass a path with the `--config` option to read the config file from elsewhere.
 
 ```
@@ -146,6 +170,8 @@ sizes:                      # Define size classes for easy assignment
     height: 10px
   medium:
     height: 20px
+
+xhr_event: "turbolinks:load"  # Javascript event name to trigger embedding icons after an xhr page load
 ```
 
 ## Contributing

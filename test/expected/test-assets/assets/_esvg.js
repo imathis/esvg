@@ -8,7 +8,7 @@
       return name+'="'+source+'" ' }
 
   function dasherize( input ) {
-    return input.replace(/[\W,_]/g, '-').replace(/-{2,}/g, '-')
+    return input.replace(/[\\W,_]/g, '-').replace(/-{2,}/g, '-')
   }
 
   function svgName( name ) {
@@ -49,9 +49,10 @@
   function svgs(){
     if ( !names ) {
       names = {}
-      for( var symbol of document.querySelectorAll( 'svg[id^=esvg] symbol' ) ) {
+      var symbols = Array.prototype.slice.call( document.querySelectorAll( 'svg[id^=esvg] symbol' ) )
+      symbols.forEach( function( symbol ) {
         names[symbol.dataset.name] = symbol
-      }
+      })
     }
     return names
   }
