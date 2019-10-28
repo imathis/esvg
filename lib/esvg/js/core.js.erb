@@ -51,7 +51,7 @@
       names = {}
       var symbols = Array.prototype.slice.call( document.querySelectorAll( 'svg[id^=esvg] symbol' ) )
       symbols.forEach( function( symbol ) {
-        names[symbol.dataset.name] = symbol
+        names[symbol.getAttribute('data-name')] = symbol
       })
     }
     return names
