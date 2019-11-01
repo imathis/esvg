@@ -21,9 +21,9 @@
     var symbol = svgs()[id]
 
     if ( symbol ) {
-      var parent = symbol.parentElement
-      var prefix = parent.dataset.prefix
-      var base   = parent.dataset.symbolClass
+      var parent = symbol.parentNode
+      var prefix = parent.getAttribute('data-prefix')
+      var base   = parent.getAttribute('data-symbol-class')
 
       var svg = document.createRange().createContextualFragment( '<svg><use xlink:href="#' + prefix + '-' + id + '"/></svg>' ).firstChild;
       svg.setAttribute( 'class', base + ' ' + prefix + '-' + id + ' ' + ( options.class || '' ).trim() )
